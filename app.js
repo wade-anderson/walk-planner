@@ -143,6 +143,16 @@ function getAllWalks() {
     });
 }
 
+function clearAllWalks() {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.clear();
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
 // --- Weather Logic (Open-Meteo) ---
 const wmoCodes = {
     0: 'Clear sky',
@@ -330,6 +340,71 @@ function setupEventListeners() {
             showListView();
             deleteConfirm = false; // reset for next time
             editorDeleteBtn.textContent = 'Delete';
+        }
+    });
+
+    // --- Data Management UI Events ---
+    const exportBtn = document.getElementById('export-btn');
+    const importBtn = document.getElementById('import-btn');
+    const importFile = document.getElementById('import-file');
+    const deleteAllBtn = document.getElementById('delete-all-btn');
+
+    exportBtn.addEventListener('click', async () => {
+        const walks = await getAllWalks();
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walks, null, 2));
+        const anchor = document.createElement('a');
+        anchor.setAttribute("href", dataStr);
+        anchor.setAttribute("download", "walk_planner_backup.json");
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+    });
+
+    importBtn.addEventListener('click', () => importFile.click());
+
+    importFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const importedData = JSON.parse(event.target.result);
+                if (Array.isArray(importedData)) {
+                    for (const walk of importedData) {
+                        delete walk.id; // Force IndexedDB to generate a new clean ID
+                        await addWalk(walk);
+                    }
+                    await renderWalks();
+                    alert("Backup data imported successfully!");
+                } else {
+                    alert("Invalid backup format.");
+                }
+            } catch (err) {
+                alert("Error importing backup data.");
+            }
+            importFile.value = ''; // reset so we can upload same file again if desired
+        };
+        reader.readAsText(file);
+    });
+
+    let deleteAllConfirm = false;
+    deleteAllBtn.addEventListener('click', async () => {
+        if (!deleteAllConfirm) {
+            deleteAllBtn.textContent = 'Are you sure?';
+            deleteAllConfirm = true;
+            setTimeout(() => {
+                if (deleteAllBtn.isConnected) {
+                    deleteAllConfirm = false;
+                    deleteAllBtn.textContent = 'Delete All Data';
+                }
+            }, 3000);
+        } else {
+            await clearAllWalks();
+            await renderWalks();
+            deleteAllConfirm = false;
+            deleteAllBtn.textContent = 'Delete All Data';
+            alert("All walks deleted.");
         }
     });
 }

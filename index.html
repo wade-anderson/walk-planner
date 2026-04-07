@@ -26,6 +26,16 @@
                 <div style="margin-top: 16px;">
                     <button type="button" id="add-walk-btn" class="btn btn-primary" style="width: 100%;">Add New Walk</button>
                 </div>
+                
+                <div class="data-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
+                    <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 5px;">Data Management</h3>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="button" id="export-btn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;">Export JSON</button>
+                        <button type="button" id="import-btn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;">Import JSON</button>
+                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                    </div>
+                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.85rem;">Delete All Data</button>
+                </div>
             </section>
         </main>
     </div>
