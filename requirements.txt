@@ -43,7 +43,7 @@ Style
     This view should have a button to open the editor.
     This view should show each daylight hour of the next 7 days with a go/no-go status in a compact form.
     Each daylight hour should be represented by a green or red pill with the hour, no need to show am/pm.
-    Hovering over a pill should show the temperature, wind speed, and weather code.
+    Pressing a pill should show the temperature, wind speed, and weather code.
     This view should show the current conditions.
 11a. When the editor opens zoom in on the walk location.  If it's a new walk, 
     use the current location of the user.

@@ -393,7 +393,7 @@ textarea:focus {
     cursor: default;
 }
 
-.hour-pill[data-tooltip]:hover::after {
+.hour-pill.show-tooltip::after {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 130%;

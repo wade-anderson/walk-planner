@@ -689,7 +689,7 @@ function openInformationView(walk) {
                 const codeDesc = wmoCodes[wCode] || 'Clear';
                 const tooltipStr = `${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}`;
                 
-                htmlAssembler += `<div class="hour-pill ${tintClass}" data-tooltip="${tooltipStr}">${compactTime}</div>`;
+                htmlAssembler += `<div class="hour-pill ${tintClass}" data-tooltip="${tooltipStr}" onclick="togglePillTooltip(this)">${compactTime}</div>`;
             }
             if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
             forecastLog.innerHTML = htmlAssembler;
@@ -699,6 +699,17 @@ function openInformationView(walk) {
     } else {
         infoCurrentBody.innerHTML = `<p style="color:var(--text-muted);">Calculating live conditions...</p>`;
         forecastLog.innerHTML = `<p style="color:var(--text-muted);">Calculating live forecasts...</p>`;
+    }
+}
+
+// tooltip utility
+function togglePillTooltip(element) {
+    const isShowing = element.classList.contains('show-tooltip');
+    document.querySelectorAll('.hour-pill.show-tooltip').forEach(el => {
+        el.classList.remove('show-tooltip');
+    });
+    if (!isShowing) {
+        element.classList.add('show-tooltip');
     }
 }
 
