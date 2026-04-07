@@ -165,13 +165,13 @@ async function fetchWeather(lat, lng) {
     weatherError.classList.add('hidden');
 
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Weather fetch failed');
         const data = await res.json();
 
         const current = data.current;
-        wTemp.textContent = `${Math.round(current.temperature_2m)}°C`;
+        wTemp.textContent = `${Math.round(current.temperature_2m)}°F`;
         wWind.textContent = current.wind_speed_10m;
         
         const code = current.weather_code;
