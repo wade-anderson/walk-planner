@@ -43,6 +43,7 @@ Style
     This view should have a button to open the editor.
     This view should show each daylight hour of the next 7 days with a go/no-go status in a compact form.
     Each daylight hour should be represented by a green or red pill with the hour, no need to show am/pm.
+    After the pills, show a button "Detail".  Pressing this button should show the temperature, wind speed, and weather code for each hour.
     Each of the next 7 days should show when low tide occurs during daylight hours by just showing the time.
     This view should show the current conditions.
 11a. When the editor opens zoom in on the walk location.  If it's a new walk, 

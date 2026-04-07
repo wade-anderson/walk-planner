@@ -662,6 +662,7 @@ function openInformationView(walk) {
             const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             let currentDayStr = "";
             let htmlAssembler = "";
+            let currentDayDetailsHtml = "";
             
             for (let i = 0; i < hourly.time.length; i++) {
                 const isDaylight = hourly.is_day[i] === 1;
@@ -671,7 +672,13 @@ function openInformationView(walk) {
                 const dateStr = timeStr.substring(0, 10);
                 
                 if (dateStr !== currentDayStr) {
-                    if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
+                    if (currentDayStr !== "") {
+                        htmlAssembler += `</div>`;
+                        htmlAssembler += `<button class="detail-btn" onclick="toggleDailyDetails(this)">Detail</button>`;
+                        htmlAssembler += `<div class="daily-detailed-list hidden">${currentDayDetailsHtml}</div>`;
+                        htmlAssembler += `</div>`;
+                        currentDayDetailsHtml = "";
+                    } 
                     const dateObj = new Date(dateStr + "T00:00:00");
                     const fullDayName = `${daysOfWeek[dateObj.getDay()]}, ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
                     
@@ -717,8 +724,25 @@ function openInformationView(walk) {
                 const compactTime = hourNum.toString();
                 
                 htmlAssembler += `<div class="hour-pill ${tintClass}">${compactTime}</div>`;
+                
+                const codeDesc = wmoCodes[wCode] || 'Clear';
+                const prettyStr = hourDateObj.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
+                const statusLabel = isHourGo ? 'GO' : 'NO';
+                
+                currentDayDetailsHtml += `
+                    <div class="hour-record ${tintClass}">
+                        <div class="hour-time">${prettyStr}</div>
+                        <div class="hour-details" style="font-weight:800; margin-right: 15px;">[${statusLabel}]</div>
+                        <div class="hour-details">${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}</div>
+                    </div>
+                `;
             }
-            if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
+            if (currentDayStr !== "") {
+                htmlAssembler += `</div>`;
+                htmlAssembler += `<button class="detail-btn" onclick="toggleDailyDetails(this)">Detail</button>`;
+                htmlAssembler += `<div class="daily-detailed-list hidden">${currentDayDetailsHtml}</div>`;
+                htmlAssembler += `</div>`;
+            }
             forecastLog.innerHTML = htmlAssembler;
         } else {
             forecastLog.innerHTML = `<p style="color:var(--text-muted);">Forecast calculating...</p>`;
@@ -726,6 +750,21 @@ function openInformationView(walk) {
     } else {
         infoCurrentBody.innerHTML = `<p style="color:var(--text-muted);">Calculating live conditions...</p>`;
         forecastLog.innerHTML = `<p style="color:var(--text-muted);">Calculating live forecasts...</p>`;
+    }
+}
+
+// UI details accordion handler
+function toggleDailyDetails(btn) {
+    const targetList = btn.nextElementSibling;
+    const isCurrentlyHidden = targetList.classList.contains('hidden');
+    
+    // Auto collapse all other days explicitly
+    document.querySelectorAll('.daily-detailed-list').forEach(list => list.classList.add('hidden'));
+    document.querySelectorAll('.detail-btn').forEach(b => b.textContent = 'Detail');
+    
+    if (isCurrentlyHidden) {
+        targetList.classList.remove('hidden');
+        btn.textContent = 'Hide Details';
     }
 }
 
