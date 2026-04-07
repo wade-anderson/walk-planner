@@ -36,13 +36,13 @@ Style
 5. The walk editor will have a save button and a cancel button.
 6. The save button will save the walk and close the editor.
 7. The cancel button will close the editor without saving.
-8. Current conditions will be displayed on each walk card and update every 60 seconds.
+8. Current conditions will be displayed on each walk card and update every 15 minutes.
 9. Show feels like temperature on the walk card.
 10. Do not show edit and delete buttons on the walk card.
 11. When a walk card is clicked, open the the walk information view.
     This view should have a button to open the editor.
     This view should show each daylight hour of the next 7 days with a go/no-go status in a compact form.
-    Each daylight hour should be represented by a green or red pill with the hour.
+    Each daylight hour should be represented by a green or red pill with the hour, no need to show am/pm.
     This view should show the current conditions.
 11a. When the editor opens zoom in on the walk location.  If it's a new walk, 
     use the current location of the user.

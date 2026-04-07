@@ -284,6 +284,8 @@ async function evaluateWalkStatus(walk, li) {
         if (tideData) tideCache[walk.id] = tideData;
     }
 
+    if (!weatherData) return false;
+
     // Default unassigned order
     li.style.order = 3;
     li.classList.remove('walk-go', 'walk-nogo');
@@ -362,6 +364,8 @@ async function evaluateWalkStatus(walk, li) {
             }
             forecastContainer.innerHTML = forecastHtml;
         }
+        
+        return true;
     }
 }
 
@@ -578,11 +582,27 @@ async function renderWalks() {
 
         walksList.appendChild(li);
         
-        // Initial fetch and 60-second polling evaluation
-        evaluateWalkStatus(walk, li);
-        weatherIntervals.push(setInterval(() => {
-            evaluateWalkStatus(walk, li);
-        }, 60000));
+        let failCount = 0;
+        let intervalId = null;
+
+        const executeTick = async () => {
+            const success = await evaluateWalkStatus(walk, li);
+            if (!success) {
+                failCount++;
+                if (failCount >= 3) {
+                    clearInterval(intervalId);
+                    const el = document.getElementById(`weather-${walk.id}`);
+                    if (el) el.innerHTML = `<span class="details" style="color:var(--danger-color)">API Blocked (3 Failures)</span>`;
+                }
+            } else {
+                failCount = 0;
+            }
+        };
+
+        // Initial fetch and throttled 15-minute polling evaluation
+        executeTick();
+        intervalId = setInterval(executeTick, 900000);
+        weatherIntervals.push(intervalId);
     });
 }
 
@@ -659,12 +679,12 @@ function openInformationView(walk) {
                 const isWindOk = wind < 15;
                 const isWeatherOk = wCode < 50;
                 const isHourGo = isTempOk && isWindOk && isWeatherOk; 
-                
                 const tintClass = isHourGo ? 'hour-go' : 'hour-nogo';
-                
+
                 const hourDateObj = new Date(timeStr);
-                const prettyTime = hourDateObj.toLocaleTimeString([], {hour: 'numeric'});
-                const compactTime = prettyTime.replace(' ', '');
+                let hourNum = hourDateObj.getHours() % 12;
+                if (hourNum === 0) hourNum = 12;
+                const compactTime = hourNum.toString();
                 
                 htmlAssembler += `<div class="hour-pill ${tintClass}">${compactTime}</div>`;
             }
