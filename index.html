@@ -27,6 +27,10 @@
                     <button type="button" id="add-walk-btn" class="btn btn-primary" style="width: 100%;">Add New Walk</button>
                 </div>
                 
+                <div id="global-fetch-tracker" class="fetch-tracker" onclick="triggerGlobalUpdate()">
+                    Initializing parameter sweeps... [Update]
+                </div>
+                
                 <div class="data-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
                     <button type="button" class="btn btn-secondary layout-route-trigger" onclick="document.getElementById('list-view').classList.add('hidden'); document.getElementById('settings-view').classList.remove('hidden');" style="font-size: 0.85rem;">Settings</button>
                 </div>

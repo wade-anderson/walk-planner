@@ -518,6 +518,26 @@ textarea:focus {
     pointer-events: none;
 }
 
+/* Global Tracker Block */
+.fetch-tracker {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 10px 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fetch-tracker:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+}
+
 .error-message {
     color: var(--danger-color);
     font-size: 0.9rem;

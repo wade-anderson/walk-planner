@@ -24,6 +24,7 @@ These are requirements for a walk planner app.
     Go/no go should be evaluated for each hour of daylight.  If there is at least one hour of go, 
     the walk should be considered go for that day.
     Tide should not be considered for future walk forecasts.
+13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
 
 
 
@@ -53,3 +54,5 @@ Style
 13. When a walk is go, it should have a green background on the walk card, and be sorted 
     to the top of the list.  
 14. When a walk is no go, it should have a light red background on the walk card.
+15. Have a button above Settings that shows the last time weather data was fetched plus "[Update]".
+    Pressing this button should update the weather data for all walks.

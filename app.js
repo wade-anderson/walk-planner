@@ -9,9 +9,10 @@ let map;
 let marker;
 let currentLatLng = null; // {lat, lng}
 let editingId = null;
-let weatherIntervals = []; // Active polling intervals
+let weatherIntervals = []; // Remaining variable for legacy scope fallback if necessary
 const weatherCache = {};
 const tideCache = {};
+let lastFetchTime = null;
 
 // --- DOM Elements ---
 const form = document.getElementById('walk-form');
@@ -44,6 +45,9 @@ async function initApp() {
     await initDB();
     setupEventListeners();
     await renderWalks();
+    
+    // Explicit global synchronization fallback interval
+    setInterval(triggerGlobalUpdate, 900000);
 }
 
 // --- Map Logic ---
@@ -546,8 +550,6 @@ function resetForm() {
 }
 
 async function renderWalks() {
-    weatherIntervals.forEach(clearInterval);
-    weatherIntervals = [];
     walksList.innerHTML = '';
     const walks = await getAllWalks();
 
@@ -556,8 +558,11 @@ async function renderWalks() {
 
     if (walks.length === 0) {
         walksList.innerHTML = '<li style="color:var(--text-muted);font-size:0.9rem;text-align:center;">No walks saved yet. Click Add New Walk!</li>';
+        renderGlobalFetchTracker();
         return;
     }
+
+    const networkPromises = [];
 
     walks.forEach(walk => {
         const li = document.createElement('li');
@@ -589,28 +594,32 @@ async function renderWalks() {
 
         walksList.appendChild(li);
         
-        let failCount = 0;
-        let intervalId = null;
-
-        const executeTick = async () => {
-            const success = await evaluateWalkStatus(walk, li);
-            if (!success) {
-                failCount++;
-                if (failCount >= 3) {
-                    clearInterval(intervalId);
-                    const el = document.getElementById(`weather-${walk.id}`);
-                    if (el) el.innerHTML = `<span class="details" style="color:var(--danger-color)">API Blocked (3 Failures)</span>`;
-                }
-            } else {
-                failCount = 0;
-            }
-        };
-
-        // Initial fetch and throttled 15-minute polling evaluation
-        executeTick();
-        intervalId = setInterval(executeTick, 900000);
-        weatherIntervals.push(intervalId);
+        networkPromises.push(evaluateWalkStatus(walk, li));
     });
+    
+    // Evaluate orchestrated network states across the entire domain!
+    const results = await Promise.all(networkPromises);
+    if (!results.includes(false) && results.length > 0) {
+        lastFetchTime = new Date();
+    }
+    renderGlobalFetchTracker();
+}
+
+async function triggerGlobalUpdate() {
+    const tracker = document.getElementById('global-fetch-tracker');
+    if (tracker) tracker.innerHTML = `Executing synchronization...`;
+    await renderWalks();
+}
+
+function renderGlobalFetchTracker() {
+    const tracker = document.getElementById('global-fetch-tracker');
+    if (!tracker) return;
+    if (lastFetchTime) {
+        const tStr = lastFetchTime.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        tracker.innerHTML = `Last fetched: ${tStr} <span style="font-weight:700; color:var(--text-main); margin-left: 5px;">[Update]</span>`;
+    } else {
+        tracker.innerHTML = `Network pending... <span style="font-weight:700; color:var(--text-main); margin-left: 5px;">[Update]</span>`;
+    }
 }
 
 function startEditing(walk) {
