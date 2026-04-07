@@ -25,7 +25,9 @@ const editorDeleteBtn = document.getElementById('editor-delete-btn');
 // View Elements
 const listView = document.getElementById('list-view');
 const editorView = document.getElementById('editor-view');
+const settingsView = document.getElementById('settings-view');
 const addWalkBtn = document.getElementById('add-walk-btn');
+const settingsBackBtn = document.getElementById('settings-back-btn');
 
 // --- Initialization ---
 async function initApp() {

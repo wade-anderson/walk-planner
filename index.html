@@ -28,13 +28,7 @@
                 </div>
                 
                 <div class="data-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 10px;">
-                    <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 5px;">Data Management</h3>
-                    <div style="display: flex; gap: 10px;">
-                        <button type="button" id="export-btn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;">Export JSON</button>
-                        <button type="button" id="import-btn" class="btn btn-secondary" style="flex: 1; font-size: 0.85rem;">Import JSON</button>
-                        <input type="file" id="import-file" accept=".json" style="display: none;">
-                    </div>
-                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.85rem;">Delete All Data</button>
+                    <button type="button" class="btn btn-secondary layout-route-trigger" onclick="document.getElementById('list-view').classList.add('hidden'); document.getElementById('settings-view').classList.remove('hidden');" style="font-size: 0.85rem;">Settings</button>
                 </div>
             </section>
         </main>
@@ -70,6 +64,27 @@
                         <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
                     </div>
                 </form>
+            </section>
+        </div>
+    </div>
+
+    <!-- Settings View -->
+    <div id="settings-view" class="view-container hidden">
+        <div class="panel-container glassmorphism" style="max-height: fit-content; padding: 30px;">
+            <header class="header" style="margin-bottom: 24px; text-align: center;">
+                <h1 style="font-size: 1.5rem;">Settings</h1>
+                <p>Manage your application data.</p>
+            </header>
+            <section class="settings-section">
+                <div class="data-actions" style="display: flex; flex-direction: column; gap: 15px;">
+                    <button type="button" id="export-btn" class="btn btn-primary" style="font-size: 0.95rem;">Export JSON Backup</button>
+                    <button type="button" id="import-btn" class="btn btn-secondary" style="font-size: 0.95rem;">Import JSON Backup</button>
+                    <input type="file" id="import-file" accept=".json" style="display: none;">
+                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.95rem; margin-top: 20px;">Delete All Data</button>
+                </div>
+                <div style="margin-top: 30px;">
+                    <button type="button" id="settings-back-btn" class="btn btn-secondary" onclick="document.getElementById('settings-view').classList.add('hidden'); document.getElementById('list-view').classList.remove('hidden');" style="width: 100%;">Done</button>
+                </div>
             </section>
         </div>
     </div>

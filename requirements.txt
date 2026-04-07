@@ -15,8 +15,10 @@ These are requirements for a walk planner app.
     2. Wind speed is below 15 mph.
     3. If it's a beach walk, the tide should be low or incoming currently.
     4. It should not be raining.
-10. Should have buttons to export and import all data in JSON format for backup.
+10. Should have a Settings button on the bottom. 
+11. Should have buttons to export and import all data in JSON format for backup.
     Should have a button to delete all data.
+    These buttons should be in Settings.
 
 
 
