@@ -1,7 +1,7 @@
 These are requirements for a walk planner app.
 
 1. Walks should be able to be created, edited, and deleted.
-2. Walks should have a name, description, and a location.
+2. Walks should have a name, and a location.
 2a. Walks should have a beach toggle, yes or no.
 3. The location for a walk is picked from a map.
 4. The map location will be used to select the nearest WeatherUnderground station.
@@ -23,3 +23,8 @@ Style
 7. The cancel button will close the editor without saving.
 8. Current conditions will be displayed on each walk card and update every 60 seconds.
 9. Show feels like temperature on the walk card.
+10. Do not show edit and delete buttons on the walk card.
+11. When a walk card is clicked, open the editor.
+11a. When the editor opens zoom in on the walk location.  If it's a new walk, 
+    use the current location of the user.
+12. The editor should have a delete button.

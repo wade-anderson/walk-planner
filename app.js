@@ -14,13 +14,13 @@ let weatherIntervals = []; // Active polling intervals
 // --- DOM Elements ---
 const form = document.getElementById('walk-form');
 const nameInput = document.getElementById('walk-name');
-const descInput = document.getElementById('walk-desc');
 const isBeachInput = document.getElementById('is-beach');
 const latDisplay = document.getElementById('loc-lat');
 const lngDisplay = document.getElementById('loc-lng');
 const walksList = document.getElementById('walks-list');
 const cancelBtn = document.getElementById('cancel-btn');
 const saveBtn = document.getElementById('save-btn');
+const editorDeleteBtn = document.getElementById('editor-delete-btn');
 
 // View Elements
 const listView = document.getElementById('list-view');
@@ -75,7 +75,7 @@ function setMapLocation(lat, lng, panTo = false) {
     }
 
     if (panTo) {
-        map.panTo([lat, lng]);
+        map.setView([lat, lng], 15); // Enforces a zoom-in behavior
     }
 }
 
@@ -251,6 +251,32 @@ function setupEventListeners() {
             map.locate({setView: true, maxZoom: 14});
         }
     });
+
+    let deleteConfirm = false;
+    editorDeleteBtn.addEventListener('click', async () => {
+        if (!editingId) return; // Should not happen
+
+        if (!deleteConfirm) {
+            editorDeleteBtn.textContent = 'Sure?';
+            deleteConfirm = true;
+            
+            // Reset back to normal after 3 seconds
+            setTimeout(() => {
+                if (editorDeleteBtn.isConnected) {
+                    deleteConfirm = false;
+                    editorDeleteBtn.textContent = 'Delete';
+                }
+            }, 3000);
+        } else {
+            // Confirmed delete
+            await deleteWalk(editingId);
+            resetForm();
+            await renderWalks();
+            showListView();
+            deleteConfirm = false; // reset for next time
+            editorDeleteBtn.textContent = 'Delete';
+        }
+    });
 }
 
 function showListView() {
@@ -276,7 +302,6 @@ async function handleFormSubmit(e) {
 
     const walkData = {
         name: nameInput.value.trim(),
-        description: descInput.value.trim(),
         isBeach: isBeachInput.checked,
         lat: currentLatLng.lat,
         lng: currentLatLng.lng,
@@ -307,6 +332,8 @@ function resetForm() {
         marker = null;
     }
     saveBtn.textContent = 'Save';
+    editorDeleteBtn.classList.add('hidden');
+    editorDeleteBtn.textContent = 'Delete';
 }
 
 async function renderWalks() {
@@ -339,47 +366,14 @@ async function renderWalks() {
             <div class="walk-item-header">
                 <span class="walk-title">${escapeHTML(walk.name)}</span>
             </div>
-            <div class="walk-desc">${escapeHTML(walk.description)}</div>
             <div class="inline-weather" id="weather-${walk.id}">
                 <div class="spinner"></div><span class="details">Loading weather...</span>
             </div>
             ${tideHtml}
-            <div class="walk-actions" style="margin-top: 10px;">
-                <button class="icon-btn edit">Edit</button>
-                <button class="icon-btn delete">Delete</button>
-            </div>
         `;
 
-        // Action listeners
-        const editBtn = li.querySelector('.edit');
-        const deleteBtn = li.querySelector('.delete');
-
-        editBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
+        li.addEventListener('click', () => {
             startEditing(walk);
-        });
-
-        let deleteConfirm = false;
-        deleteBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (!deleteConfirm) {
-                deleteBtn.textContent = 'Sure?';
-                deleteBtn.style.color = 'var(--danger-hover)';
-                deleteConfirm = true;
-                
-                // Reset back to normal after 3 seconds
-                setTimeout(() => {
-                    if (deleteBtn.isConnected) { // Only if still in DOM
-                        deleteConfirm = false;
-                        deleteBtn.textContent = 'Delete';
-                        deleteBtn.style.color = '';
-                    }
-                }, 3000);
-            } else {
-                await deleteWalk(walk.id);
-                if (editingId === walk.id) resetForm();
-                await renderWalks();
-            }
         });
 
         walksList.appendChild(li);
@@ -399,12 +393,18 @@ async function renderWalks() {
 function startEditing(walk) {
     editingId = walk.id;
     nameInput.value = walk.name;
-    descInput.value = walk.description;
     isBeachInput.checked = walk.isBeach || false;
-    setMapLocation(walk.lat, walk.lng, true);
     
     saveBtn.textContent = 'Save';
+    editorDeleteBtn.classList.remove('hidden');
     showEditorView();
+
+    // Delay the map targeting until after the view is unhidden to prevent offset bugs
+    setTimeout(() => {
+        if (map) {
+            setMapLocation(walk.lat, walk.lng, true);
+        }
+    }, 20);
 }
 
 function escapeHTML(str) {
