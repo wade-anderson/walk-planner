@@ -89,6 +89,34 @@
         </div>
     </div>
 
+    <!-- Info View -->
+    <div id="info-view" class="view-container hidden" style="z-index: 15; display: flex; justify-content: center; align-items: center; background: var(--bg-color);">
+        <div class="panel-container glassmorphism info-panel">
+            <header class="header">
+                <h1 id="info-title">Walk Details</h1>
+                <p>Live current conditions and detailed forecast.</p>
+            </header>
+            <section class="info-current-section" style="margin-bottom: 20px;">
+                <h2 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted);">Current Conditions</h2>
+                <div id="info-current-body" style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; margin-top: 5px; min-height: 50px;">
+                    <!-- Populated via Javascript -->
+                </div>
+            </section>
+            
+            <section class="info-forecast-section">
+                <h2 style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 5px;">7-Day Extended Forecast</h2>
+                <div id="forecast-log" class="forecast-log">
+                    <!-- Populated via Javascript -->
+                </div>
+            </section>
+
+            <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="button" class="btn btn-primary" id="info-edit-btn" style="flex:1;">Edit Walk</button>
+                <button type="button" class="btn btn-secondary" id="info-back-btn" style="flex:1;">Back</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="app.js"></script>

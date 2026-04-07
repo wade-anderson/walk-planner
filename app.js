@@ -10,6 +10,8 @@ let marker;
 let currentLatLng = null; // {lat, lng}
 let editingId = null;
 let weatherIntervals = []; // Active polling intervals
+const weatherCache = {};
+const tideCache = {};
 
 // --- DOM Elements ---
 const form = document.getElementById('walk-form');
@@ -26,8 +28,15 @@ const editorDeleteBtn = document.getElementById('editor-delete-btn');
 const listView = document.getElementById('list-view');
 const editorView = document.getElementById('editor-view');
 const settingsView = document.getElementById('settings-view');
+const infoView = document.getElementById('info-view');
+
 const addWalkBtn = document.getElementById('add-walk-btn');
 const settingsBackBtn = document.getElementById('settings-back-btn');
+const infoBackBtn = document.getElementById('info-back-btn');
+const infoEditBtn = document.getElementById('info-edit-btn');
+const infoTitle = document.getElementById('info-title');
+const infoCurrentBody = document.getElementById('info-current-body');
+const forecastLog = document.getElementById('forecast-log');
 
 // --- Initialization ---
 async function initApp() {
@@ -171,7 +180,7 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
     if (!el) return;
     
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&hourly=apparent_temperature,wind_speed_10m,weather_code,is_day&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Weather fetch failed');
         const data = await res.json();
@@ -188,7 +197,7 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
             <span class="details">Feels like ${feelsLike}°F • ${desc} • Wind: ${wind} mph</span>
         `;
         
-        return { feelsLike, wind, weatherCode: code };
+        return { feelsLike, wind, weatherCode: code, hourly: data.hourly };
     } catch (err) {
         if (retries > 0) {
             el.innerHTML = `<div class="spinner" style="width:15px; height:15px; margin: 0;"></div><span class="details" style="margin-left: 8px;">...</span>`;
@@ -267,10 +276,12 @@ async function fetchInlineTide(lat, lng, elementId) {
 
 async function evaluateWalkStatus(walk, li) {
     const weatherData = await fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+    if (weatherData) weatherCache[walk.id] = weatherData;
     
     let tideData = null;
     if (walk.isBeach) {
         tideData = await fetchInlineTide(walk.lat, walk.lng, `tide-${walk.id}`);
+        if (tideData) tideCache[walk.id] = tideData;
     }
 
     // Default unassigned order
@@ -301,6 +312,56 @@ async function evaluateWalkStatus(walk, li) {
             li.classList.add('walk-nogo');
             li.style.order = 2;
         }
+
+        if (weatherData.hourly && weatherData.hourly.time) {
+            const hourly = weatherData.hourly;
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            const dayStatusMap = {};
+            const orderedDates = [];
+            
+            for (let i = 0; i < hourly.time.length; i++) {
+                const timeStr = hourly.time[i];
+                const dateStr = timeStr.substring(0, 10);
+                
+                if (!dayStatusMap.hasOwnProperty(dateStr)) {
+                    dayStatusMap[dateStr] = false;
+                    orderedDates.push(dateStr);
+                }
+                
+                if (dayStatusMap[dateStr]) continue;
+                
+                const isDaylight = hourly.is_day[i] === 1;
+                if (!isDaylight) continue;
+                
+                const temp = hourly.apparent_temperature[i];
+                const wind = hourly.wind_speed_10m[i];
+                const wCode = hourly.weather_code[i];
+                
+                if (temp >= 68 && temp <= 80 && wind < 15 && wCode < 50) {
+                    dayStatusMap[dateStr] = true;
+                }
+            }
+            
+            let forecastHtml = `<div class="forecast-row">`;
+            const renderDays = Math.min(7, orderedDates.length);
+            for (let j = 0; j < renderDays; j++) {
+                const dateStr = orderedDates[j];
+                const dateObj = new Date(dateStr + "T00:00:00");
+                const dayName = daysOfWeek[dateObj.getDay()];
+                const tintClass = dayStatusMap[dateStr] ? 'forecast-go' : 'forecast-nogo';
+                forecastHtml += `<div class="forecast-badge ${tintClass}">${dayName}</div>`;
+            }
+            forecastHtml += `</div>`;
+            
+            let forecastContainer = li.querySelector('.forecast-container');
+            if (!forecastContainer) {
+                forecastContainer = document.createElement('div');
+                forecastContainer.className = 'forecast-container';
+                li.appendChild(forecastContainer);
+            }
+            forecastContainer.innerHTML = forecastHtml;
+        }
     }
 }
 
@@ -317,6 +378,11 @@ function setupEventListeners() {
         if (map) {
             map.locate({setView: true, maxZoom: 14});
         }
+    });
+
+    infoBackBtn.addEventListener('click', () => {
+        infoView.classList.add('hidden');
+        listView.classList.remove('hidden');
     });
 
     let deleteConfirm = false;
@@ -504,8 +570,10 @@ async function renderWalks() {
             ${tideHtml}
         `;
 
-        li.addEventListener('click', () => {
-            startEditing(walk);
+        li.addEventListener('click', (e) => {
+            // Prevent interference if we click inside something heavily nested
+            e.stopPropagation();
+            openInformationView(walk);
         });
 
         walksList.appendChild(li);
@@ -539,6 +607,76 @@ function escapeHTML(str) {
     const div = document.createElement('div');
     div.innerText = str;
     return div.innerHTML;
+}
+
+function openInformationView(walk) {
+    listView.classList.add('hidden');
+    infoView.classList.remove('hidden');
+    
+    infoTitle.textContent = walk.name;
+    infoEditBtn.onclick = () => {
+        infoView.classList.add('hidden');
+        startEditing(walk);
+    };
+
+    const wData = weatherCache[walk.id];
+    const tData = tideCache[walk.id];
+    
+    if (wData) {
+        const desc = wmoCodes[wData.weatherCode] || 'Unknown';
+        let tideStr = walk.isBeach ? (tData && tData.isTideSafe !== undefined ? `<br>Tide constraint: ${tData.isTideSafe ? 'Safe' : 'Unfavorable'}` : `<br>Tide pending...`) : '';
+        infoCurrentBody.innerHTML = `
+            <div style="font-size: 1.1rem; font-weight: 600;">Feels like ${wData.feelsLike}°F</div>
+            <div style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">Wind: ${wData.wind} mph • ${desc} ${tideStr}</div>
+        `;
+
+        if (wData.hourly && wData.hourly.time) {
+            const hourly = wData.hourly;
+            const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            let currentDayStr = "";
+            let htmlAssembler = "";
+            
+            for (let i = 0; i < hourly.time.length; i++) {
+                const isDaylight = hourly.is_day[i] === 1;
+                if (!isDaylight) continue; // Skip non-daylight hours entirely
+                
+                const timeStr = hourly.time[i]; 
+                const dateStr = timeStr.substring(0, 10);
+                
+                if (dateStr !== currentDayStr) {
+                    if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
+                    const dateObj = new Date(dateStr + "T00:00:00");
+                    const fullDayName = `${daysOfWeek[dateObj.getDay()]}, ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                    htmlAssembler += `<div class="day-group"><h3>${fullDayName}</h3><div class="hour-pill-container">`;
+                    currentDayStr = dateStr;
+                }
+                
+                const temp = hourly.apparent_temperature[i];
+                const wind = hourly.wind_speed_10m[i];
+                const wCode = hourly.weather_code[i];
+                
+                const isTempOk = temp >= 68 && temp <= 80;
+                const isWindOk = wind < 15;
+                const isWeatherOk = wCode < 50;
+                const isHourGo = isTempOk && isWindOk && isWeatherOk; 
+                
+                const tintClass = isHourGo ? 'hour-go' : 'hour-nogo';
+                
+                const hourDateObj = new Date(timeStr);
+                const prettyTime = hourDateObj.toLocaleTimeString([], {hour: 'numeric'});
+                const compactTime = prettyTime.replace(' ', '');
+                
+                htmlAssembler += `<div class="hour-pill ${tintClass}">${compactTime}</div>`;
+            }
+            if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
+            forecastLog.innerHTML = htmlAssembler;
+        } else {
+            forecastLog.innerHTML = `<p style="color:var(--text-muted);">Forecast calculating...</p>`;
+        }
+    } else {
+        infoCurrentBody.innerHTML = `<p style="color:var(--text-muted);">Calculating live conditions...</p>`;
+        forecastLog.innerHTML = `<p style="color:var(--text-muted);">Calculating live forecasts...</p>`;
+    }
 }
 
 // Start

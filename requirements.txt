@@ -19,6 +19,11 @@ These are requirements for a walk planner app.
 11. Should have buttons to export and import all data in JSON format for backup.
     Should have a button to delete all data.
     These buttons should be in Settings.
+12. Future walk forecast.
+    Should show the walk go/no-go status for the next 7 days on the walk card.
+    Go/no go should be evaluated for each hour of daylight.  If there is at least one hour of go, 
+    the walk should be considered go for that day.
+    Tide should not be considered for future walk forecasts.
 
 
 
@@ -34,7 +39,11 @@ Style
 8. Current conditions will be displayed on each walk card and update every 60 seconds.
 9. Show feels like temperature on the walk card.
 10. Do not show edit and delete buttons on the walk card.
-11. When a walk card is clicked, open the editor.
+11. When a walk card is clicked, open the the walk information view.
+    This view should have a button to open the editor.
+    This view should show each daylight hour of the next 7 days with a go/no-go status in a compact form.
+    Each daylight hour should be represented by a green or red pill with the hour.
+    This view should show the current conditions.
 11a. When the editor opens zoom in on the walk location.  If it's a new walk, 
     use the current location of the user.
 12. The editor should have a delete button.
