@@ -9,6 +9,7 @@ let map;
 let marker;
 let currentLatLng = null; // {lat, lng}
 let editingId = null;
+let weatherIntervals = []; // Active polling intervals
 
 // --- DOM Elements ---
 const form = document.getElementById('walk-form');
@@ -158,20 +159,21 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
     if (!el) return;
     
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Weather fetch failed');
         const data = await res.json();
 
         const current = data.current;
         const temp = `${Math.round(current.temperature_2m)}°F`;
+        const feelsLike = Math.round(current.apparent_temperature);
         const code = current.weather_code;
         const desc = wmoCodes[code] || 'Unknown';
         const wind = current.wind_speed_10m;
 
         el.innerHTML = `
             <span class="temp">${temp}</span>
-            <span class="details">${desc} • Wind: ${wind} mph</span>
+            <span class="details">Feels like ${feelsLike}°F • ${desc} • Wind: ${wind} mph</span>
         `;
     } catch (err) {
         if (retries > 0) {
@@ -308,6 +310,8 @@ function resetForm() {
 }
 
 async function renderWalks() {
+    weatherIntervals.forEach(clearInterval);
+    weatherIntervals = [];
     walksList.innerHTML = '';
     const walks = await getAllWalks();
 
@@ -379,7 +383,13 @@ async function renderWalks() {
         });
 
         walksList.appendChild(li);
+        
+        // Initial fetch and 60-second polling
         fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+        weatherIntervals.push(setInterval(() => {
+            fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+        }, 60000));
+
         if (walk.isBeach) {
             fetchInlineTide(walk.lat, walk.lng, `tide-${walk.id}`);
         }
