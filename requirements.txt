@@ -5,3 +5,4 @@ These are requirements for a walk planner app.
 3. The location for a walk is picked from a map.
 4. The map location will be used to select the nearest WeatherUnderground station.
 5. The nearest WeatherUnderground station will be used to get the weather forecast for the walk.
+6. Location of the map should start at users current location.

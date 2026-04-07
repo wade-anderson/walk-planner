@@ -41,7 +41,7 @@ async function initApp() {
 
 // --- Map Logic ---
 function initMap() {
-    // Default to a central location (London)
+    // Default to a central location (London) until geolocation loads
     map = L.map('map', {zoomControl: false}).setView([51.505, -0.09], 13);
     
     // Add Zoom control to bottom right so it doesn't clash with our UI
@@ -51,6 +51,13 @@ function initMap() {
         maxZoom: 19,
         attribution: '© OpenStreetMap'
     }).addTo(map);
+
+    // Attempt to locate the user and pan the map to their position
+    map.locate({setView: true, maxZoom: 14});
+
+    map.on('locationerror', function(e) {
+        console.warn('Geolocation access denied or failed. Using default fixed location.');
+    });
 
     map.on('click', function(e) {
         setMapLocation(e.latlng.lat, e.latlng.lng);
