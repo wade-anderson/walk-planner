@@ -686,7 +686,10 @@ function openInformationView(walk) {
                 if (hourNum === 0) hourNum = 12;
                 const compactTime = hourNum.toString();
                 
-                htmlAssembler += `<div class="hour-pill ${tintClass}">${compactTime}</div>`;
+                const codeDesc = wmoCodes[wCode] || 'Clear';
+                const tooltipStr = `${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}`;
+                
+                htmlAssembler += `<div class="hour-pill ${tintClass}" data-tooltip="${tooltipStr}">${compactTime}</div>`;
             }
             if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
             forecastLog.innerHTML = htmlAssembler;
