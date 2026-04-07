@@ -5,3 +5,4 @@ This is the architecture for a walk planner app.
 3. The app will use OpenStreetMap for map data.
 4. The app will use IndexDB for data storage.
 5. The app will use Leaflet for map display.
+6. The app should be mobile friendly.
