@@ -14,6 +14,7 @@ let editingId = null;
 const form = document.getElementById('walk-form');
 const nameInput = document.getElementById('walk-name');
 const descInput = document.getElementById('walk-desc');
+const isBeachInput = document.getElementById('is-beach');
 const latDisplay = document.getElementById('loc-lat');
 const lngDisplay = document.getElementById('loc-lng');
 const walksList = document.getElementById('walks-list');
@@ -152,7 +153,7 @@ const wmoCodes = {
     95: 'Thunderstorm'
 };
 
-async function fetchInlineWeather(lat, lng, elementId) {
+async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
     const el = document.getElementById(elementId);
     if (!el) return;
     
@@ -173,8 +174,64 @@ async function fetchInlineWeather(lat, lng, elementId) {
             <span class="details">${desc} • Wind: ${wind} mph</span>
         `;
     } catch (err) {
-        console.error(err);
-        el.innerHTML = `<span class="details" style="color:var(--danger-color)">Weather unavailable</span>`;
+        if (retries > 0) {
+            el.innerHTML = `<div class="spinner" style="width:15px; height:15px; margin: 0;"></div><span class="details" style="margin-left: 8px;">...</span>`;
+            setTimeout(() => {
+                fetchInlineWeather(lat, lng, elementId, retries - 1);
+            }, 1000);
+        } else {
+            console.error('Weather retries exhausted:', err);
+            el.innerHTML = `<span class="details" style="color:var(--danger-color)">Weather unavailable</span>`;
+        }
+    }
+}
+
+async function fetchInlineTide(lat, lng, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    try {
+        const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=sea_level_height_msl&timezone=auto`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Marine fetch failed');
+        const data = await res.json();
+
+        // data.hourly.sea_level might not be available for deeply inland coordinates
+        if (!data.hourly || !data.hourly.sea_level_height_msl || data.hourly.sea_level_height_msl.every(v => v === null)) {
+             el.innerHTML = `<span class="details" style="color:var(--text-muted)">No tide data (inland location)</span>`;
+             return;
+        }
+
+        const times = data.hourly.time;
+        const levels = data.hourly.sea_level_height_msl;
+        
+        const now = new Date();
+        let nextLowIdx = -1;
+        
+        for (let i = 1; i < times.length - 1; i++) {
+            const timeDate = new Date(times[i]);
+            if (timeDate > now) {
+                // Valid lowest point
+                if (levels[i] <= levels[i-1] && levels[i] < levels[i+1]) {
+                    nextLowIdx = i;
+                    break;
+                }
+            }
+        }
+        
+        if (nextLowIdx !== -1) {
+            const lowTime = new Date(times[nextLowIdx]);
+            const timeStr = lowTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            el.innerHTML = `
+                <span class="temp" style="font-size:1.3rem;">🌊</span>
+                <span class="details" style="color: #60a5fa; font-weight: 500;">Next low tide: ${timeStr}</span>
+            `;
+        } else {
+            el.innerHTML = `<span class="details" style="color:var(--text-muted)">Tide data unavailable</span>`;
+        }
+    } catch (err) {
+        console.error('Tide Error', err);
+        el.innerHTML = `<span class="details" style="color:var(--danger-color)">Marine data error</span>`;
     }
 }
 
@@ -218,6 +275,7 @@ async function handleFormSubmit(e) {
     const walkData = {
         name: nameInput.value.trim(),
         description: descInput.value.trim(),
+        isBeach: isBeachInput.checked,
         lat: currentLatLng.lat,
         lng: currentLatLng.lng,
         updatedAt: Date.now()
@@ -237,6 +295,7 @@ async function handleFormSubmit(e) {
 
 function resetForm() {
     form.reset();
+    isBeachInput.checked = false;
     editingId = null;
     currentLatLng = null;
     latDisplay.textContent = 'Lat: --';
@@ -264,6 +323,14 @@ async function renderWalks() {
         const li = document.createElement('li');
         li.className = 'walk-item';
         
+        let tideHtml = '';
+        if (walk.isBeach) {
+            tideHtml = `
+            <div class="inline-weather" id="tide-${walk.id}" style="margin-top: 4px; padding-top:4px; border:none; min-height:30px;">
+                <div class="spinner" style="width:15px; height:15px; margin: 0;"></div><span class="details" style="margin-left: 8px;">Loading tide...</span>
+            </div>`;
+        }
+
         li.innerHTML = `
             <div class="walk-item-header">
                 <span class="walk-title">${escapeHTML(walk.name)}</span>
@@ -272,7 +339,8 @@ async function renderWalks() {
             <div class="inline-weather" id="weather-${walk.id}">
                 <div class="spinner"></div><span class="details">Loading weather...</span>
             </div>
-            <div class="walk-actions">
+            ${tideHtml}
+            <div class="walk-actions" style="margin-top: 10px;">
                 <button class="icon-btn edit">Edit</button>
                 <button class="icon-btn delete">Delete</button>
             </div>
@@ -312,6 +380,9 @@ async function renderWalks() {
 
         walksList.appendChild(li);
         fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+        if (walk.isBeach) {
+            fetchInlineTide(walk.lat, walk.lng, `tide-${walk.id}`);
+        }
     });
 }
 
@@ -319,6 +390,7 @@ function startEditing(walk) {
     editingId = walk.id;
     nameInput.value = walk.name;
     descInput.value = walk.description;
+    isBeachInput.checked = walk.isBeach || false;
     setMapLocation(walk.lat, walk.lng, true);
     
     saveBtn.textContent = 'Save';
