@@ -1,0 +1,7 @@
+These are requirements for a walk planner app.
+
+1. Walks should be able to be created, edited, and deleted.
+2. Walks should have a name, description, and a location.
+3. The location for a walk is picked from a map.
+4. The map location will be used to select the nearest WeatherUnderground station.
+5. The nearest WeatherUnderground station will be used to get the weather forecast for the walk.

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Walk Planner</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="map"></div>
+
+    <main class="panel-container glassmorphism">
+        <header class="header">
+            <h1>Walk Planner</h1>
+            <p>Plan your routes and check the weather.</p>
+        </header>
+
+        <section class="add-walk-section">
+            <h2>Add / Edit Walk</h2>
+            <form id="walk-form">
+                <input type="hidden" id="walk-id">
+                <div class="form-group">
+                    <label for="walk-name">Name</label>
+                    <input type="text" id="walk-name" placeholder="e.g., Morning Park Stroll" required>
+                </div>
+                <div class="form-group">
+                    <label for="walk-desc">Description</label>
+                    <textarea id="walk-desc" placeholder="Notes about this route..." rows="2" required></textarea>
+                </div>
+                <div class="form-group location-group">
+                    <label>Location (Click Map)</label>
+                    <div class="location-display">
+                        <span id="loc-lat">Lat: --</span>
+                        <span id="loc-lng">Lng: --</span>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary" id="save-btn">Save Walk</button>
+                    <button type="button" class="btn btn-secondary hidden" id="cancel-btn">Cancel Edit</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="walk-list-section">
+            <h2>Saved Walks</h2>
+            <ul id="walks-list" class="walks-list">
+                <!-- Walks will be rendered here -->
+            </ul>
+        </section>
+    </main>
+
+    <!-- Weather Widget (Hidden by default, shown when a walk is selected) -->
+    <aside id="weather-widget" class="weather-widget glassmorphism hidden">
+        <div class="weather-header">
+            <h3>Weather Forecast</h3>
+            <button id="close-weather" class="close-btn">&times;</button>
+        </div>
+        <div id="weather-content" class="weather-content">
+            <div class="weather-loading spinner hidden"></div>
+            <div class="weather-data hidden">
+                <div class="temp-display">
+                    <span id="w-temp">--°C</span>
+                </div>
+                <div class="weather-details">
+                    <p id="w-desc">--</p>
+                    <p>Wind: <span id="w-wind">--</span> km/h</p>
+                </div>
+            </div>
+            <div id="w-error" class="hidden error-message">Failed to load weather data.</div>
+        </div>
+    </aside>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+This is the architecture for a walk planner app.
+
+1. The app will be a static web page.
+2. The app will use Open-Meteo for weather data.
+3. The app will use OpenStreetMap for map data.
+4. The app will use IndexDB for data storage.
+5. The app will use Leaflet for map display.
