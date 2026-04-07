@@ -175,15 +175,20 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
             <span class="temp">${temp}</span>
             <span class="details">Feels like ${feelsLike}°F • ${desc} • Wind: ${wind} mph</span>
         `;
+        
+        return { feelsLike, wind, weatherCode: code };
     } catch (err) {
         if (retries > 0) {
             el.innerHTML = `<div class="spinner" style="width:15px; height:15px; margin: 0;"></div><span class="details" style="margin-left: 8px;">...</span>`;
-            setTimeout(() => {
-                fetchInlineWeather(lat, lng, elementId, retries - 1);
-            }, 1000);
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(fetchInlineWeather(lat, lng, elementId, retries - 1));
+                }, 1000);
+            });
         } else {
             console.error('Weather retries exhausted:', err);
             el.innerHTML = `<span class="details" style="color:var(--danger-color)">Weather unavailable</span>`;
+            return null;
         }
     }
 }
@@ -209,10 +214,18 @@ async function fetchInlineTide(lat, lng, elementId) {
         
         const now = new Date();
         let nextLowIdx = -1;
+        let isTideSafe = false;
+        let foundTrend = false;
         
         for (let i = 1; i < times.length - 1; i++) {
             const timeDate = new Date(times[i]);
             if (timeDate > now) {
+                if (!foundTrend) {
+                    // Safe if sea level is rising (incoming) or perfectly flat bottomed
+                    isTideSafe = levels[i] >= levels[i-1];
+                    foundTrend = true;
+                }
+
                 // Valid lowest point
                 if (levels[i] <= levels[i-1] && levels[i] < levels[i+1]) {
                     nextLowIdx = i;
@@ -231,9 +244,51 @@ async function fetchInlineTide(lat, lng, elementId) {
         } else {
             el.innerHTML = `<span class="details" style="color:var(--text-muted)">Tide data unavailable</span>`;
         }
+        
+        return { isTideSafe };
     } catch (err) {
         console.error('Tide Error', err);
         el.innerHTML = `<span class="details" style="color:var(--danger-color)">Marine data error</span>`;
+        return null;
+    }
+}
+
+async function evaluateWalkStatus(walk, li) {
+    const weatherData = await fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+    
+    let tideData = null;
+    if (walk.isBeach) {
+        tideData = await fetchInlineTide(walk.lat, walk.lng, `tide-${walk.id}`);
+    }
+
+    // Default unassigned order
+    li.style.order = 3;
+    li.classList.remove('walk-go', 'walk-nogo');
+
+    if (weatherData) {
+        let isGo = true;
+        
+        // Rule: Feels like temperature is between 68 and 80 degrees F
+        if (weatherData.feelsLike < 68 || weatherData.feelsLike > 80) isGo = false;
+        
+        // Rule: Wind speed is below 15 mph
+        if (weatherData.wind >= 15) isGo = false;
+        
+        // Rule: It should not be raining (Codes 50+ are drizzle, rain, snow, thunder)
+        if (weatherData.weatherCode >= 50) isGo = false;
+
+        // Rule: If it's a beach walk, the tide should be low or incoming currently
+        if (walk.isBeach) {
+            if (!tideData || !tideData.isTideSafe) isGo = false;
+        }
+
+        if (isGo) {
+            li.classList.add('walk-go');
+            li.style.order = 1;
+        } else {
+            li.classList.add('walk-nogo');
+            li.style.order = 2;
+        }
     }
 }
 
@@ -378,15 +433,11 @@ async function renderWalks() {
 
         walksList.appendChild(li);
         
-        // Initial fetch and 60-second polling
-        fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+        // Initial fetch and 60-second polling evaluation
+        evaluateWalkStatus(walk, li);
         weatherIntervals.push(setInterval(() => {
-            fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
+            evaluateWalkStatus(walk, li);
         }, 60000));
-
-        if (walk.isBeach) {
-            fetchInlineTide(walk.lat, walk.lng, `tide-${walk.id}`);
-        }
     });
 }
 

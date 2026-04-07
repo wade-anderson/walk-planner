@@ -10,6 +10,11 @@ These are requirements for a walk planner app.
 7. The app shall use english units for temperature, wind speed, etc.
 8. If the beach toggle is set to yes, the app should use the nearest ocean tide information and 
     show the next low tide time on the walk card.
+9. Walks have a go or no go status.  Walks are no go unless they meet the following criteria:
+    1. Feels like temperature is between 68 and 80 degrees F.
+    2. Wind speed is below 15 mph.
+    3. If it's a beach walk, the tide should be low or incoming currently.
+    4. It should not be raining.
 
 
 Style
@@ -28,3 +33,6 @@ Style
 11a. When the editor opens zoom in on the walk location.  If it's a new walk, 
     use the current location of the user.
 12. The editor should have a delete button.
+13. When a walk is go, it should have a green background on the walk card, and be sorted 
+    to the top of the list.  
+14. When a walk is no go, it should have a light red background on the walk card.

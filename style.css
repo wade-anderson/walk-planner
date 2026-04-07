@@ -215,6 +215,16 @@ textarea:focus {
     transform: translateY(-2px);
 }
 
+.walk-go {
+    background: rgba(34, 197, 94, 0.15) !important;
+    border: 1px solid rgba(34, 197, 94, 0.4) !important;
+}
+
+.walk-nogo {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid rgba(239, 68, 68, 0.4) !important;
+}
+
 .walk-item-header {
     display: flex;
     justify-content: space-between;
