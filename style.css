@@ -47,12 +47,6 @@ body {
 
 /* Main Panel Layout */
 .panel-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    width: 380px;
-    max-height: calc(100vh - 40px);
-    z-index: 1000;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
@@ -262,68 +256,69 @@ textarea:focus {
     color: var(--danger-color);
 }
 
-/* Weather Widget */
-.weather-widget {
+/* View Containers */
+.view-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 10;
+}
+
+#list-view {
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--bg-color);
+}
+
+#editor-view {
+    z-index: 20;
+}
+
+#list-view .panel-container {
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+}
+
+.editor-overlay {
     position: absolute;
     top: 20px;
-    right: 20px;
-    width: 280px;
+    left: 20px;
+    width: 380px;
+    max-height: calc(100vh - 40px);
     z-index: 1000;
-    padding: 16px;
-    transition: opacity 0.3s, transform 0.3s;
 }
 
-.weather-header {
+/* Inline Weather */
+.inline-weather {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 8px;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.1);
 }
 
-.weather-header h3 {
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    font-size: 1.2rem;
-    cursor: pointer;
-}
-
-.close-btn:hover {
-    color: white;
-}
-
-.temp-display {
-    font-size: 2.5rem;
+.inline-weather .temp {
+    font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 4px;
     color: #fcd34d;
 }
 
-.weather-details {
-    font-size: 0.9rem;
+.inline-weather .details {
+    font-size: 0.8rem;
     color: var(--text-muted);
-    line-height: 1.5;
 }
 
-.spinner {
-    width: 30px;
-    height: 30px;
-    border: 3px solid rgba(255, 255, 255, 0.1);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.inline-weather .spinner {
+    width: 20px;
+    height: 20px;
+    margin: 5px 0;
+    border-width: 2px;
 }
 
 /* Utilities */
@@ -346,7 +341,14 @@ textarea:focus {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    .panel-container {
+    #list-view .panel-container {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        border: none;
+    }
+
+    .editor-overlay {
         top: auto;
         bottom: 0;
         left: 0;
@@ -356,13 +358,6 @@ textarea:focus {
         padding: 20px;
         border: none;
         border-top: 1px solid var(--glass-border);
-    }
-
-    .weather-widget {
-        top: 10px;
-        right: 10px;
-        left: 10px;
-        width: calc(100% - 20px);
     }
 
     /* Move Leaflet zoom controls above the bottom panel */

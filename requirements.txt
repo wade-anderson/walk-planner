@@ -7,3 +7,14 @@ These are requirements for a walk planner app.
 5. The nearest WeatherUnderground station will be used to get the weather forecast for the walk.
 6. Location of the map should start at users current location.
 7. The app shall use english units for temperature, wind speed, etc.
+
+
+Style
+1. The initial view of the app should be the list of walk cards. The map should be hidden.  No walk editor should be displayed.
+2. At the bottom of the walk list should be an add walk button.
+3. The walk editor will appear when the add walk button is clicked or a walk is editted.
+4. The walk editor will be full screen and include a map to select the walk location.
+5. The walk editor will have a save button and a cancel button.
+6. The save button will save the walk and close the editor.
+7. The cancel button will close the editor without saving.
+8. Current conditions will be displayed on each walk card.

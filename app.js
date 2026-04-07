@@ -20,16 +20,10 @@ const walksList = document.getElementById('walks-list');
 const cancelBtn = document.getElementById('cancel-btn');
 const saveBtn = document.getElementById('save-btn');
 
-// Weather Widget Elements
-const weatherWidget = document.getElementById('weather-widget');
-const closeWeatherBtn = document.getElementById('close-weather');
-const weatherContent = document.getElementById('weather-content');
-const weatherLoading = document.querySelector('.weather-loading');
-const weatherData = document.querySelector('.weather-data');
-const weatherError = document.getElementById('w-error');
-const wTemp = document.getElementById('w-temp');
-const wDesc = document.getElementById('w-desc');
-const wWind = document.getElementById('w-wind');
+// View Elements
+const listView = document.getElementById('list-view');
+const editorView = document.getElementById('editor-view');
+const addWalkBtn = document.getElementById('add-walk-btn');
 
 // --- Initialization ---
 async function initApp() {
@@ -158,12 +152,10 @@ const wmoCodes = {
     95: 'Thunderstorm'
 };
 
-async function fetchWeather(lat, lng) {
-    weatherWidget.classList.remove('hidden');
-    weatherLoading.classList.remove('hidden');
-    weatherData.classList.add('hidden');
-    weatherError.classList.add('hidden');
-
+async function fetchInlineWeather(lat, lng, elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
     try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,weather_code&temperature_unit=fahrenheit&wind_speed_unit=mph`;
         const res = await fetch(url);
@@ -171,26 +163,48 @@ async function fetchWeather(lat, lng) {
         const data = await res.json();
 
         const current = data.current;
-        wTemp.textContent = `${Math.round(current.temperature_2m)}°F`;
-        wWind.textContent = current.wind_speed_10m;
-        
+        const temp = `${Math.round(current.temperature_2m)}°F`;
         const code = current.weather_code;
-        wDesc.textContent = wmoCodes[code] || 'Unknown';
+        const desc = wmoCodes[code] || 'Unknown';
+        const wind = current.wind_speed_10m;
 
-        weatherLoading.classList.add('hidden');
-        weatherData.classList.remove('hidden');
+        el.innerHTML = `
+            <span class="temp">${temp}</span>
+            <span class="details">${desc} • Wind: ${wind} mph</span>
+        `;
     } catch (err) {
         console.error(err);
-        weatherLoading.classList.add('hidden');
-        weatherError.classList.remove('hidden');
+        el.innerHTML = `<span class="details" style="color:var(--danger-color)">Weather unavailable</span>`;
     }
 }
 
 // --- UI & Event Listeners ---
 function setupEventListeners() {
     form.addEventListener('submit', handleFormSubmit);
-    cancelBtn.addEventListener('click', resetForm);
-    closeWeatherBtn.addEventListener('click', () => weatherWidget.classList.add('hidden'));
+    cancelBtn.addEventListener('click', () => {
+        resetForm();
+        showListView();
+    });
+    addWalkBtn.addEventListener('click', () => {
+        resetForm();
+        showEditorView();
+        if (map) {
+            map.locate({setView: true, maxZoom: 14});
+        }
+    });
+}
+
+function showListView() {
+    editorView.classList.add('hidden');
+    listView.classList.remove('hidden');
+}
+
+function showEditorView() {
+    listView.classList.add('hidden');
+    editorView.classList.remove('hidden');
+    if (map) {
+        setTimeout(() => map.invalidateSize(), 10);
+    }
 }
 
 async function handleFormSubmit(e) {
@@ -218,6 +232,7 @@ async function handleFormSubmit(e) {
 
     resetForm();
     await renderWalks();
+    showListView();
 }
 
 function resetForm() {
@@ -230,9 +245,7 @@ function resetForm() {
         map.removeLayer(marker);
         marker = null;
     }
-    cancelBtn.classList.add('hidden');
-    saveBtn.textContent = 'Save Walk';
-    weatherWidget.classList.add('hidden');
+    saveBtn.textContent = 'Save';
 }
 
 async function renderWalks() {
@@ -243,7 +256,7 @@ async function renderWalks() {
     walks.sort((a, b) => b.updatedAt - a.updatedAt);
 
     if (walks.length === 0) {
-        walksList.innerHTML = '<li style="color:var(--text-muted);font-size:0.9rem;">No walks saved yet. Click the map to start!</li>';
+        walksList.innerHTML = '<li style="color:var(--text-muted);font-size:0.9rem;text-align:center;">No walks saved yet. Click Add New Walk!</li>';
         return;
     }
 
@@ -256,6 +269,9 @@ async function renderWalks() {
                 <span class="walk-title">${escapeHTML(walk.name)}</span>
             </div>
             <div class="walk-desc">${escapeHTML(walk.description)}</div>
+            <div class="inline-weather" id="weather-${walk.id}">
+                <div class="spinner"></div><span class="details">Loading weather...</span>
+            </div>
             <div class="walk-actions">
                 <button class="icon-btn edit">Edit</button>
                 <button class="icon-btn delete">Delete</button>
@@ -265,14 +281,6 @@ async function renderWalks() {
         // Action listeners
         const editBtn = li.querySelector('.edit');
         const deleteBtn = li.querySelector('.delete');
-
-        li.addEventListener('click', (e) => {
-            if (e.target !== editBtn && e.target !== deleteBtn) {
-                // View Mode
-                setMapLocation(walk.lat, walk.lng, true);
-                fetchWeather(walk.lat, walk.lng);
-            }
-        });
 
         editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -298,14 +306,12 @@ async function renderWalks() {
             } else {
                 await deleteWalk(walk.id);
                 if (editingId === walk.id) resetForm();
-                if (currentLatLng && currentLatLng.lat === walk.lat && currentLatLng.lng === walk.lng) {
-                     weatherWidget.classList.add('hidden');
-                }
                 await renderWalks();
             }
         });
 
         walksList.appendChild(li);
+        fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
     });
 }
 
@@ -315,8 +321,8 @@ function startEditing(walk) {
     descInput.value = walk.description;
     setMapLocation(walk.lat, walk.lng, true);
     
-    cancelBtn.classList.remove('hidden');
-    saveBtn.textContent = 'Update Walk';
+    saveBtn.textContent = 'Save';
+    showEditorView();
 }
 
 function escapeHTML(str) {
