@@ -236,37 +236,44 @@ async function fetchInlineTide(lat, lng, elementId) {
         const now = new Date();
         let nextLowIdx = -1;
         let isTideSafe = false;
-        let foundTrend = false;
         
+        const lowTideIndices = [];
         for (let i = 1; i < times.length - 1; i++) {
-            const timeDate = new Date(times[i]);
-            if (timeDate > now) {
-                if (!foundTrend) {
-                    // Safe if sea level is rising (incoming) or perfectly flat bottomed
-                    isTideSafe = levels[i] >= levels[i-1];
-                    foundTrend = true;
-                }
-
-                // Valid lowest point
-                if (levels[i] <= levels[i-1] && levels[i] < levels[i+1]) {
-                    nextLowIdx = i;
-                    break;
-                }
+            if (levels[i] <= levels[i-1] && levels[i] <= levels[i+1]) {
+                lowTideIndices.push(i);
+            }
+        }
+        
+        let currentHourIdx = -1;
+        for (let i = 0; i < times.length; i++) {
+            if (new Date(times[i]) > now) {
+                currentHourIdx = i - 1;
+                if (currentHourIdx < 0) currentHourIdx = 0;
+                break;
+            }
+        }
+        
+        if (currentHourIdx !== -1) {
+            isTideSafe = lowTideIndices.some(lowIdx => Math.abs(currentHourIdx - lowIdx) <= 2);
+            
+            const futureLows = lowTideIndices.filter(idx => idx > currentHourIdx);
+            if (futureLows.length > 0) {
+                nextLowIdx = futureLows[0];
             }
         }
         
         if (nextLowIdx !== -1) {
             const lowTime = new Date(times[nextLowIdx]);
-            const timeStr = lowTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            let prettyTime = lowTime.toLocaleTimeString([], {hour: 'numeric'});
             el.innerHTML = `
                 <span class="temp" style="font-size:1.3rem;">🌊</span>
-                <span class="details" style="color: #60a5fa; font-weight: 500;">Next low tide: ${timeStr}</span>
+                <span class="details" style="color: #60a5fa; font-weight: 500;">Next low tide: ${prettyTime}</span>
             `;
         } else {
             el.innerHTML = `<span class="details" style="color:var(--text-muted)">Tide data unavailable</span>`;
         }
         
-        return { isTideSafe };
+        return { isTideSafe, lowTideIndices, times };
     } catch (err) {
         console.error('Tide Error', err);
         el.innerHTML = `<span class="details" style="color:var(--danger-color)">Marine data error</span>`;
@@ -667,7 +674,30 @@ function openInformationView(walk) {
                     if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
                     const dateObj = new Date(dateStr + "T00:00:00");
                     const fullDayName = `${daysOfWeek[dateObj.getDay()]}, ${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-                    htmlAssembler += `<div class="day-group"><h3>${fullDayName}</h3><div class="hour-pill-container">`;
+                    
+                    let tideLabelHtml = '';
+                    if (walk.isBeach && tData && tData.lowTideIndices) {
+                        const dayLowTides = [];
+                        tData.lowTideIndices.forEach(idx => {
+                            const tStr = tData.times[idx];
+                            if (tStr.startsWith(dateStr)) {
+                                const wIdx = hourly.time.indexOf(tStr);
+                                if (wIdx !== -1 && hourly.is_day[wIdx] === 1) {
+                                    const tideTime = new Date(tStr);
+                                    let prettyTide = tideTime.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
+                                    dayLowTides.push(prettyTide);
+                                }
+                            }
+                        });
+                        
+                        if (dayLowTides.length > 0) {
+                            tideLabelHtml = `<span class="day-tide-label">Low Tide: ${dayLowTides.join(', ')}</span>`;
+                        } else {
+                            tideLabelHtml = `<span class="day-tide-label">No Daylight Low Tide</span>`;
+                        }
+                    }
+                    
+                    htmlAssembler += `<div class="day-group"><h3><span>${fullDayName}</span>${tideLabelHtml}</h3><div class="hour-pill-container">`;
                     currentDayStr = dateStr;
                 }
                 
@@ -686,10 +716,7 @@ function openInformationView(walk) {
                 if (hourNum === 0) hourNum = 12;
                 const compactTime = hourNum.toString();
                 
-                const codeDesc = wmoCodes[wCode] || 'Clear';
-                const tooltipStr = `${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}`;
-                
-                htmlAssembler += `<div class="hour-pill ${tintClass}" data-tooltip="${tooltipStr}" onclick="togglePillTooltip(this)">${compactTime}</div>`;
+                htmlAssembler += `<div class="hour-pill ${tintClass}">${compactTime}</div>`;
             }
             if (currentDayStr !== "") htmlAssembler += `</div></div>`; 
             forecastLog.innerHTML = htmlAssembler;
@@ -699,17 +726,6 @@ function openInformationView(walk) {
     } else {
         infoCurrentBody.innerHTML = `<p style="color:var(--text-muted);">Calculating live conditions...</p>`;
         forecastLog.innerHTML = `<p style="color:var(--text-muted);">Calculating live forecasts...</p>`;
-    }
-}
-
-// tooltip utility
-function togglePillTooltip(element) {
-    const isShowing = element.classList.contains('show-tooltip');
-    document.querySelectorAll('.hour-pill.show-tooltip').forEach(el => {
-        el.classList.remove('show-tooltip');
-    });
-    if (!isShowing) {
-        element.classList.add('show-tooltip');
     }
 }
 

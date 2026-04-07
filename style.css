@@ -365,12 +365,25 @@ textarea:focus {
 }
 
 .day-group h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--text-main);
     padding-bottom: 4px;
     margin-bottom: 6px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.day-tide-label {
+    font-size: 0.70rem;
+    font-weight: 500;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.15);
+    padding: 2px 6px;
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
 .hour-pill-container {
@@ -390,25 +403,6 @@ textarea:focus {
     background: rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.05);
     text-align: center;
-    cursor: default;
-}
-
-.hour-pill.show-tooltip::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: 130%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(10, 10, 15, 0.95);
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 8px;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    z-index: 1000;
-    pointer-events: none;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .hour-pill.hour-go {
