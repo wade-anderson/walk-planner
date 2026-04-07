@@ -279,9 +279,23 @@ async function renderWalks() {
             startEditing(walk);
         });
 
+        let deleteConfirm = false;
         deleteBtn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            if (confirm('Are you sure you want to delete this walk?')) {
+            if (!deleteConfirm) {
+                deleteBtn.textContent = 'Sure?';
+                deleteBtn.style.color = 'var(--danger-hover)';
+                deleteConfirm = true;
+                
+                // Reset back to normal after 3 seconds
+                setTimeout(() => {
+                    if (deleteBtn.isConnected) { // Only if still in DOM
+                        deleteConfirm = false;
+                        deleteBtn.textContent = 'Delete';
+                        deleteBtn.style.color = '';
+                    }
+                }, 3000);
+            } else {
                 await deleteWalk(walk.id);
                 if (editingId === walk.id) resetForm();
                 if (currentLatLng && currentLatLng.lat === walk.lat && currentLatLng.lng === walk.lng) {
