@@ -715,7 +715,23 @@ function openInformationView(walk) {
                 const isTempOk = temp >= 68 && temp <= 80;
                 const isWindOk = wind < 15;
                 const isWeatherOk = wCode < 50;
-                const isHourGo = isTempOk && isWindOk && isWeatherOk; 
+                
+                let isHourGo = isTempOk && isWindOk && isWeatherOk; 
+                let tideDescStr = "";
+                
+                if (walk.isBeach && tData && tData.lowTideIndices) {
+                    const tideIdx = tData.times.indexOf(timeStr);
+                    if (tideIdx !== -1) {
+                         const isTideValid = tData.lowTideIndices.some(lowIdx => Math.abs(tideIdx - lowIdx) <= 2);
+                         if (!isTideValid) {
+                             isHourGo = false;
+                             tideDescStr = " • High Tide/Dangerous";
+                         } else {
+                             tideDescStr = " • Safe Low Tide bounds";
+                         }
+                    }
+                }
+                
                 const tintClass = isHourGo ? 'hour-go' : 'hour-nogo';
 
                 const hourDateObj = new Date(timeStr);
@@ -733,7 +749,7 @@ function openInformationView(walk) {
                     <div class="hour-record ${tintClass}">
                         <div class="hour-time">${prettyStr}</div>
                         <div class="hour-details" style="font-weight:800; margin-right: 15px;">[${statusLabel}]</div>
-                        <div class="hour-details">${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}</div>
+                        <div class="hour-details">${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}${tideDescStr}</div>
                     </div>
                 `;
             }
