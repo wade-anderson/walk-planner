@@ -80,14 +80,43 @@
                 <p>Manage your application data.</p>
             </header>
             <section class="settings-section">
+                <!-- Go/No-Go Parameters -->
+                <div class="settings-group" style="margin-bottom: 30px;">
+                    <h2 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main);">Walk Parameters</h2>
+                    <div class="form-group">
+                        <label for="set-temp-min">Min Feels Like Temp (°F)</label>
+                        <input type="number" id="set-temp-min" value="68">
+                    </div>
+                    <div class="form-group">
+                        <label for="set-temp-max">Max Feels Like Temp (°F)</label>
+                        <input type="number" id="set-temp-max" value="80">
+                    </div>
+                    <div class="form-group">
+                        <label for="set-wind-max">Max Wind Speed (mph)</label>
+                        <input type="number" id="set-wind-max" value="15">
+                    </div>
+                    <div class="form-group">
+                        <label for="set-tide-window">Beach Tide Window (± hours)</label>
+                        <input type="number" id="set-tide-window" min="1" max="12" step="1" value="2">
+                    </div>
+                    <div class="form-group toggle-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 15px;">
+                        <input type="checkbox" id="set-no-rain" checked style="width: auto; transform: scale(1.2);">
+                        <label for="set-no-rain" style="font-size: 0.95rem; margin: 0; cursor: pointer;">Require no rain</label>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 20px 0;"></div>
+
                 <div class="data-actions" style="display: flex; flex-direction: column; gap: 15px;">
+                    <h2 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--text-main);">Data Management</h2>
                     <button type="button" id="export-btn" class="btn btn-primary" style="font-size: 0.95rem;">Export JSON Backup</button>
                     <button type="button" id="import-btn" class="btn btn-secondary" style="font-size: 0.95rem;">Import JSON Backup</button>
                     <input type="file" id="import-file" accept=".json" style="display: none;">
-                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.95rem; margin-top: 20px;">Delete All Data</button>
+                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.95rem; margin-top: 10px;">Delete All Data</button>
                 </div>
                 <div style="margin-top: 30px;">
-                    <button type="button" id="settings-back-btn" class="btn btn-secondary" onclick="document.getElementById('settings-view').classList.add('hidden'); document.getElementById('list-view').classList.remove('hidden');" style="width: 100%;">Done</button>
+                    <!-- App JS now handles the onclick hide and save logic -->
+                    <button type="button" id="settings-back-btn" class="btn btn-secondary" style="width: 100%;">Done</button>
                 </div>
             </section>
         </div>

@@ -14,6 +14,50 @@ const weatherCache = {};
 const tideCache = {};
 let lastFetchTime = null;
 
+let userSettings = {
+    tempMin: 68,
+    tempMax: 80,
+    windMax: 15,
+    tideWindow: 2,
+    noRain: true
+};
+
+function loadSettings() {
+    const stored = localStorage.getItem('walkSettings');
+    if (stored) {
+        try {
+            userSettings = { ...userSettings, ...JSON.parse(stored) };
+        } catch(e) { }
+    }
+    const setTempMinInput = document.getElementById('set-temp-min');
+    const setTempMaxInput = document.getElementById('set-temp-max');
+    const setWindMaxInput = document.getElementById('set-wind-max');
+    const setTideWindowInput = document.getElementById('set-tide-window');
+    const setNoRainInput = document.getElementById('set-no-rain');
+    
+    if (setTempMinInput) setTempMinInput.value = userSettings.tempMin;
+    if (setTempMaxInput) setTempMaxInput.value = userSettings.tempMax;
+    if (setWindMaxInput) setWindMaxInput.value = userSettings.windMax;
+    if (setTideWindowInput) setTideWindowInput.value = userSettings.tideWindow;
+    if (setNoRainInput) setNoRainInput.checked = userSettings.noRain;
+}
+
+function saveSettings() {
+    const setTempMinInput = document.getElementById('set-temp-min');
+    const setTempMaxInput = document.getElementById('set-temp-max');
+    const setWindMaxInput = document.getElementById('set-wind-max');
+    const setTideWindowInput = document.getElementById('set-tide-window');
+    const setNoRainInput = document.getElementById('set-no-rain');
+
+    if (setTempMinInput) userSettings.tempMin = parseFloat(setTempMinInput.value);
+    if (setTempMaxInput) userSettings.tempMax = parseFloat(setTempMaxInput.value);
+    if (setWindMaxInput) userSettings.windMax = parseFloat(setWindMaxInput.value);
+    if (setTideWindowInput) userSettings.tideWindow = parseInt(setTideWindowInput.value, 10);
+    if (setNoRainInput) userSettings.noRain = setNoRainInput.checked;
+    
+    localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+}
+
 // --- DOM Elements ---
 const form = document.getElementById('walk-form');
 const nameInput = document.getElementById('walk-name');
@@ -41,6 +85,7 @@ const forecastLog = document.getElementById('forecast-log');
 
 // --- Initialization ---
 async function initApp() {
+    loadSettings();
     initMap();
     await initDB();
     setupEventListeners();
@@ -258,7 +303,7 @@ async function fetchInlineTide(lat, lng, elementId) {
         }
         
         if (currentHourIdx !== -1) {
-            isTideSafe = lowTideIndices.some(lowIdx => Math.abs(currentHourIdx - lowIdx) <= 2);
+            isTideSafe = lowTideIndices.some(lowIdx => Math.abs(currentHourIdx - lowIdx) <= userSettings.tideWindow);
             
             const futureLows = lowTideIndices.filter(idx => idx > currentHourIdx);
             if (futureLows.length > 0) {
@@ -304,14 +349,14 @@ async function evaluateWalkStatus(walk, li) {
     if (weatherData) {
         let isGo = true;
         
-        // Rule: Feels like temperature is between 68 and 80 degrees F
-        if (weatherData.feelsLike < 68 || weatherData.feelsLike > 80) isGo = false;
+        // Rule: Feels like temperature is between settings boundaries
+        if (weatherData.feelsLike < userSettings.tempMin || weatherData.feelsLike > userSettings.tempMax) isGo = false;
         
-        // Rule: Wind speed is below 15 mph
-        if (weatherData.wind >= 15) isGo = false;
+        // Rule: Wind speed is below max settings
+        if (weatherData.wind >= userSettings.windMax) isGo = false;
         
-        // Rule: It should not be raining (Codes 50+ are drizzle, rain, snow, thunder)
-        if (weatherData.weatherCode >= 50) isGo = false;
+        // Rule: It should not be raining per settings
+        if (userSettings.noRain && weatherData.weatherCode >= 50) isGo = false;
 
         // Rule: If it's a beach walk, the tide should be low or incoming currently
         if (walk.isBeach) {
@@ -351,7 +396,7 @@ async function evaluateWalkStatus(walk, li) {
                 const wind = hourly.wind_speed_10m[i];
                 const wCode = hourly.weather_code[i];
                 
-                if (temp >= 68 && temp <= 80 && wind < 15 && wCode < 50) {
+                if (temp >= userSettings.tempMin && temp <= userSettings.tempMax && wind < userSettings.windMax && (!userSettings.noRain || wCode < 50)) {
                     dayStatusMap[dateStr] = true;
                 }
             }
@@ -382,6 +427,13 @@ async function evaluateWalkStatus(walk, li) {
 
 // --- UI & Event Listeners ---
 function setupEventListeners() {
+    settingsBackBtn.addEventListener('click', async () => {
+        saveSettings();
+        document.getElementById('settings-view').classList.add('hidden');
+        document.getElementById('list-view').classList.remove('hidden');
+        await renderWalks();
+    });
+
     form.addEventListener('submit', handleFormSubmit);
     cancelBtn.addEventListener('click', () => {
         resetForm();
@@ -721,9 +773,9 @@ function openInformationView(walk) {
                 const wind = hourly.wind_speed_10m[i];
                 const wCode = hourly.weather_code[i];
                 
-                const isTempOk = temp >= 68 && temp <= 80;
-                const isWindOk = wind < 15;
-                const isWeatherOk = wCode < 50;
+                const isTempOk = temp >= userSettings.tempMin && temp <= userSettings.tempMax;
+                const isWindOk = wind < userSettings.windMax;
+                const isWeatherOk = !userSettings.noRain || wCode < 50;
                 
                 let isHourGo = isTempOk && isWindOk && isWeatherOk; 
                 let tideDescStr = "";
@@ -731,7 +783,7 @@ function openInformationView(walk) {
                 if (walk.isBeach && tData && tData.lowTideIndices) {
                     const tideIdx = tData.times.indexOf(timeStr);
                     if (tideIdx !== -1) {
-                         const isTideValid = tData.lowTideIndices.some(lowIdx => Math.abs(tideIdx - lowIdx) <= 2);
+                         const isTideValid = tData.lowTideIndices.some(lowIdx => Math.abs(tideIdx - lowIdx) <= userSettings.tideWindow);
                          if (!isTideValid) {
                              isHourGo = false;
                              tideDescStr = " • High Tide/Dangerous";

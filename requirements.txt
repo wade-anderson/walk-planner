@@ -11,14 +11,21 @@ These are requirements for a walk planner app.
 8. If the beach toggle is set to yes, the app should use the nearest ocean tide information and 
     show the next low tide time on the walk card.
 9. Walks have a go or no go status.  Walks are no go unless they meet the following criteria:
-    1. Feels like temperature is between 68 and 80 degrees F.
-    2. Wind speed is below 15 mph.
-    3. If it's a beach walk, the tide should be within 2 hours plus or minus of low tide.
-    4. It should not be raining.
+    1. Feels like temperature is between settings min and max.
+    2. Wind speed is below settings wind speed max.
+    3. If it's a beach walk, the tide should be within settings beach tide window plus or minus of low tide.
+    4. It should not be raining per settings.
 10. Should have a Settings button on the bottom. 
-11. Should have buttons to export and import all data in JSON format for backup.
+11. Settings import/export.
+    Should have buttons to export and import all data in JSON format for backup.
     Should have a button to delete all data.
     These buttons should be in Settings.
+    These should be on the bottom of settings screen.
+11a. Settings go/no go parameters.
+    Should have feels like temperature min and max.
+    Should have wind speed max.
+    Should have beach tide window.
+    Should have rain toggle.
 12. Future walk forecast.
     Should show the walk go/no-go status for the next 7 days on the walk card.
     Go/no go should be evaluated for each hour of daylight.  If there is at least one hour of go, 
