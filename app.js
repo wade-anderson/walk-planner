@@ -92,7 +92,7 @@ async function initApp() {
     await renderWalks();
     
     // Explicit global synchronization fallback interval
-    setInterval(triggerGlobalUpdate, 900000);
+    setInterval(triggerGlobalUpdate, 3600000);
 }
 
 // --- Map Logic ---

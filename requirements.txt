@@ -44,7 +44,7 @@ Style
 5. The walk editor will have a save button and a cancel button.
 6. The save button will save the walk and close the editor.
 7. The cancel button will close the editor without saving.
-8. Current conditions will be displayed on each walk card and update every 15 minutes.
+8. Current conditions will be displayed on each walk card and update every 60 minutes.
 9. Show feels like temperature on the walk card.
 10. Do not show edit and delete buttons on the walk card.
 11. When a walk card is clicked, open the the walk information view.
