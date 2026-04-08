@@ -786,9 +786,9 @@ function openInformationView(walk) {
                          const isTideValid = tData.lowTideIndices.some(lowIdx => Math.abs(tideIdx - lowIdx) <= userSettings.tideWindow);
                          if (!isTideValid) {
                              isHourGo = false;
-                             tideDescStr = " • High Tide/Dangerous";
+                             tideDescStr = " • High Tide";
                          } else {
-                             tideDescStr = " • Safe Low Tide bounds";
+                             tideDescStr = " • Low Tide";
                          }
                     }
                 }
@@ -803,14 +803,14 @@ function openInformationView(walk) {
                 htmlAssembler += `<div class="hour-pill ${tintClass}">${compactTime}</div>`;
                 
                 const codeDesc = wmoCodes[wCode] || 'Clear';
-                const prettyStr = hourDateObj.toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'});
-                const statusLabel = isHourGo ? 'GO' : 'NO';
+                const prettyStr = hourDateObj.toLocaleTimeString([], {hour: 'numeric'});
                 
                 currentDayDetailsHtml += `
                     <div class="hour-record ${tintClass}">
                         <div class="hour-time">${prettyStr}</div>
-                        <div class="hour-details" style="font-weight:800; margin-right: 15px;">[${statusLabel}]</div>
-                        <div class="hour-details">${Math.round(temp)}°F • ${Math.round(wind)} mph • ${codeDesc}${tideDescStr}</div>
+                        <div class="hour-details">
+                            <span>${Math.round(temp)}°F • ${Math.round(wind)}mph • ${codeDesc}${tideDescStr}</span>
+                        </div>
                     </div>
                 `;
             }
