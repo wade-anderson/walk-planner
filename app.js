@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
 
 // --- State ---
 let db;
