@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 
 // --- State ---
 let db;
@@ -45,8 +45,6 @@ function loadSettings() {
     if (setNoRainInput) setNoRainInput.checked = userSettings.noRain;
     if (setNotificationsInput) {
         setNotificationsInput.checked = userSettings.allowNotifications;
-        const testBtn = document.getElementById('test-notification-btn');
-        if (testBtn) testBtn.disabled = !userSettings.allowNotifications;
     }
 }
 
@@ -541,39 +539,7 @@ function setupEventListeners() {
     const importFile = document.getElementById('import-file');
     const deleteAllBtn = document.getElementById('delete-all-btn');
 
-    const testNotificationBtn = document.getElementById('test-notification-btn');
-    const notificationToggle = document.getElementById('set-notifications');
 
-    if (notificationToggle) {
-        notificationToggle.addEventListener('change', () => {
-            testNotificationBtn.disabled = !notificationToggle.checked;
-        });
-    }
-
-    testNotificationBtn.addEventListener('click', () => {
-        if (!('Notification' in window)) {
-            alert('This browser does not support desktop notifications.');
-            return;
-        }
-
-        if (Notification.permission === 'granted') {
-            testNotificationBtn.disabled = true;
-            testNotificationBtn.textContent = 'Notification scheduled (1min)...';
-            
-            setTimeout(() => {
-                new Notification('Walk Planner', {
-                    body: 'This is your 1-minute delayed test notification! It works!',
-                    icon: 'icon.png'
-                });
-                testNotificationBtn.disabled = false;
-                testNotificationBtn.textContent = 'Send Test Notification';
-            }, 60000);
-        } else if (Notification.permission !== 'denied') {
-            alert('Please enable notifications in your browser settings first.');
-        } else {
-            alert('Notifications are blocked by your browser. Please change your site settings to allow them.');
-        }
-    });
 
     exportBtn.addEventListener('click', async () => {
         const walks = await getAllWalks();
