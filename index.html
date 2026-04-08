@@ -9,6 +9,8 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
 </head>
 <body>
     <div id="list-view" class="view-container">
@@ -102,6 +104,10 @@
                     <div class="form-group toggle-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 15px;">
                         <input type="checkbox" id="set-no-rain" checked style="width: auto; transform: scale(1.2);">
                         <label for="set-no-rain" style="font-size: 0.95rem; margin: 0; cursor: pointer;">Require no rain</label>
+                    </div>
+                    <div class="form-group toggle-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px;">
+                        <input type="checkbox" id="set-notifications" style="width: auto; transform: scale(1.2);">
+                        <label for="set-notifications" style="font-size: 0.95rem; margin: 0; cursor: pointer;">Enable Notifications</label>
                     </div>
                 </div>
 

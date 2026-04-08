@@ -20,7 +20,8 @@ let userSettings = {
     tempMax: 80,
     windMax: 15,
     tideWindow: 2,
-    noRain: true
+    noRain: true,
+    allowNotifications: false
 };
 
 function loadSettings() {
@@ -35,12 +36,14 @@ function loadSettings() {
     const setWindMaxInput = document.getElementById('set-wind-max');
     const setTideWindowInput = document.getElementById('set-tide-window');
     const setNoRainInput = document.getElementById('set-no-rain');
+    const setNotificationsInput = document.getElementById('set-notifications');
     
     if (setTempMinInput) setTempMinInput.value = userSettings.tempMin;
     if (setTempMaxInput) setTempMaxInput.value = userSettings.tempMax;
     if (setWindMaxInput) setWindMaxInput.value = userSettings.windMax;
     if (setTideWindowInput) setTideWindowInput.value = userSettings.tideWindow;
     if (setNoRainInput) setNoRainInput.checked = userSettings.noRain;
+    if (setNotificationsInput) setNotificationsInput.checked = userSettings.allowNotifications;
 }
 
 function saveSettings() {
@@ -49,6 +52,7 @@ function saveSettings() {
     const setWindMaxInput = document.getElementById('set-wind-max');
     const setTideWindowInput = document.getElementById('set-tide-window');
     const setNoRainInput = document.getElementById('set-no-rain');
+    const setNotificationsInput = document.getElementById('set-notifications');
 
     if (setTempMinInput) userSettings.tempMin = parseFloat(setTempMinInput.value);
     if (setTempMaxInput) userSettings.tempMax = parseFloat(setTempMaxInput.value);
@@ -56,7 +60,41 @@ function saveSettings() {
     if (setTideWindowInput) userSettings.tideWindow = parseInt(setTideWindowInput.value, 10);
     if (setNoRainInput) userSettings.noRain = setNoRainInput.checked;
     
+    if (setNotificationsInput) {
+        if (setNotificationsInput.checked && !userSettings.allowNotifications) {
+            requestNotificationPermission();
+        }
+        userSettings.allowNotifications = setNotificationsInput.checked;
+    }
+    
     localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+}
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.warn('This browser does not support desktop notifications');
+        return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+        console.log('Notification permission granted.');
+    }
+}
+
+async function checkAndSendGoNotification(walk) {
+    if (!userSettings.allowNotifications || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const today = new Date().toISOString().split('T')[0];
+    if (walk.lastNotifiedDate === today) return;
+
+    new Notification('Walk Planner', {
+        body: `${walk.name} is a GO! Enjoy your walk.`,
+        icon: 'icon.png'
+    });
+
+    walk.lastNotifiedDate = today;
+    await updateWalk(walk);
 }
 
 // --- DOM Elements ---
@@ -98,6 +136,15 @@ async function initApp() {
     
     // Explicit global synchronization fallback interval
     setInterval(triggerGlobalUpdate, 3600000);
+
+    // Register Service Worker for PWA / Offline support
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW: Registered', reg))
+                .catch(err => console.error('SW: Failed', err));
+        });
+    }
 }
 
 // --- Map Logic ---
@@ -371,6 +418,7 @@ async function evaluateWalkStatus(walk, li) {
         if (isGo) {
             li.classList.add('walk-go');
             li.style.order = 1;
+            checkAndSendGoNotification(walk);
         } else {
             li.classList.add('walk-nogo');
             li.style.order = 2;
