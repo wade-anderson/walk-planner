@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.1.7';
+const APP_VERSION = '1.1.8';
 
 // --- State ---
 let db;
@@ -145,6 +145,14 @@ async function initApp() {
             navigator.serviceWorker.register('./sw.js')
                 .then(reg => console.log('SW: Registered', reg))
                 .catch(err => console.error('SW: Failed', err));
+        });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                window.location.reload();
+            }
         });
     }
 }

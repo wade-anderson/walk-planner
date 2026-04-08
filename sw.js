@@ -1,5 +1,5 @@
 // Commit: 5
-const CACHE_NAME = 'walk-planner-v1.1.7';
+const CACHE_NAME = 'walk-planner-v1.1.8';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -44,6 +44,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests for our cache
   if (event.request.method !== 'GET') return;
+
+  // Bypass cache for external APIs (like Open-Meteo) so UI always gets fresh data
+  if (event.request.url.includes('open-meteo.com')) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {

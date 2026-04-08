@@ -31,7 +31,7 @@ These are requirements for a walk planner app.
     the walk should be considered go for that day.
     Tide status is excluded from the daily "Go" summary on the main list to prioritize weather window visibility.
 13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
-14. Should have a version number that starts with 1.1.7.
+14. Should have a version number that starts with 1.1.8.
 
 
 Style
