@@ -32,7 +32,7 @@ These are requirements for a walk planner app.
     the walk should be considered go for that day.
     Tide should not be considered for future walk forecasts.
 13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
-14. Should have a version number that starts with 1.1.3.
+14. Should have a version number that starts with 1.1.4.
 
 
 Style
