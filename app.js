@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 // --- State ---
 let db;
@@ -43,7 +43,11 @@ function loadSettings() {
     if (setWindMaxInput) setWindMaxInput.value = userSettings.windMax;
     if (setTideWindowInput) setTideWindowInput.value = userSettings.tideWindow;
     if (setNoRainInput) setNoRainInput.checked = userSettings.noRain;
-    if (setNotificationsInput) setNotificationsInput.checked = userSettings.allowNotifications;
+    if (setNotificationsInput) {
+        setNotificationsInput.checked = userSettings.allowNotifications;
+        const testBtn = document.getElementById('test-notification-btn');
+        if (testBtn) testBtn.disabled = !userSettings.allowNotifications;
+    }
 }
 
 function saveSettings() {
@@ -538,6 +542,13 @@ function setupEventListeners() {
     const deleteAllBtn = document.getElementById('delete-all-btn');
 
     const testNotificationBtn = document.getElementById('test-notification-btn');
+    const notificationToggle = document.getElementById('set-notifications');
+
+    if (notificationToggle) {
+        notificationToggle.addEventListener('change', () => {
+            testNotificationBtn.disabled = !notificationToggle.checked;
+        });
+    }
 
     testNotificationBtn.addEventListener('click', () => {
         if (!('Notification' in window)) {
