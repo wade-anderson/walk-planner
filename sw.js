@@ -1,3 +1,4 @@
+// Commit: 1
 const CACHE_NAME = 'walk-planner-v1.1.2';
 const ASSETS_TO_CACHE = [
   './',
@@ -19,6 +20,7 @@ self.addEventListener('install', (event) => {
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
+  self.skipWaiting();
 });
 
 // Activate: Clean up old caches
@@ -35,6 +37,7 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
+  self.clients.claim();
 });
 
 // Fetch: Stale-While-Revalidate strategy
