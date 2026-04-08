@@ -580,9 +580,15 @@ textarea:focus {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+    #list-view, #settings-view {
+        align-items: flex-start;
+        overflow-y: auto;
+    }
+
     #list-view .panel-container, #settings-view .panel-container {
         max-width: 100%;
-        max-height: 100vh;
+        max-height: none;
+        min-height: 100vh;
         border-radius: 0;
         border: none;
     }
