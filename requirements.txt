@@ -3,9 +3,8 @@ These are requirements for a walk planner app.
 1. Walks should be able to be created, edited, and deleted.
 2. Walks should have a name, and a location.
 2a. Walks should have a beach toggle, yes or no.
-3. The location for a walk is picked from a map.
-4. The map location will be used to select the nearest WeatherUnderground station.
-5. The nearest WeatherUnderground station will be used to get the weather forecast for the walk.
+4. The map location coordinates will be used to query weather and marine data.
+5. The app shall use the Open-Meteo API for high-resolution climatic and tidal forecasts.
 6. Location of the map should start at users current location.
 7. The app shall use english units for temperature, wind speed, etc.
 8. If the beach toggle is set to yes, the app should use the nearest ocean tide information and 
@@ -30,7 +29,7 @@ These are requirements for a walk planner app.
     Should show the walk go/no-go status for the next 7 days on the walk card.
     Go/no go should be evaluated for each hour of daylight.  If there is at least one hour of go, 
     the walk should be considered go for that day.
-    Tide should not be considered for future walk forecasts.
+    Tide status is excluded from the daily "Go" summary on the main list to prioritize weather window visibility.
 13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
 14. Should have a version number that starts with 1.1.5.
 
@@ -63,7 +62,7 @@ Style
 14. When a walk is no go, it should have a light red background on the walk card.
 15. Have a button above Settings that shows the last time weather data was fetched plus "[Update]".
     Pressing this button should update the weather data for all walks.
-16. Should show the version number on the bottom of the settings screen.
+16. Should show the version number on the top of the settings screen.
 17. PWA (Progressive Web App) Support:
     1. The app shall include a Web App Manifest to allow installation on home screens.
     2. The app shall use a Service Worker to cache HTML, CSS, JS, and map assets for offline use.
