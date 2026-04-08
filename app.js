@@ -537,6 +537,33 @@ function setupEventListeners() {
     const importFile = document.getElementById('import-file');
     const deleteAllBtn = document.getElementById('delete-all-btn');
 
+    const testNotificationBtn = document.getElementById('test-notification-btn');
+
+    testNotificationBtn.addEventListener('click', () => {
+        if (!('Notification' in window)) {
+            alert('This browser does not support desktop notifications.');
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            testNotificationBtn.disabled = true;
+            testNotificationBtn.textContent = 'Notification scheduled (1min)...';
+            
+            setTimeout(() => {
+                new Notification('Walk Planner', {
+                    body: 'This is your 1-minute delayed test notification! It works!',
+                    icon: 'icon.png'
+                });
+                testNotificationBtn.disabled = false;
+                testNotificationBtn.textContent = 'Send Test Notification';
+            }, 60000);
+        } else if (Notification.permission !== 'denied') {
+            alert('Please enable notifications in your browser settings first.');
+        } else {
+            alert('Notifications are blocked by your browser. Please change your site settings to allow them.');
+        }
+    });
+
     exportBtn.addEventListener('click', async () => {
         const walks = await getAllWalks();
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walks, null, 2));
