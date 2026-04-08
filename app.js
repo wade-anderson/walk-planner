@@ -2,6 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
+const APP_VERSION = '1.0.0';
 
 // --- State ---
 let db;
@@ -90,6 +91,10 @@ async function initApp() {
     await initDB();
     setupEventListeners();
     await renderWalks();
+    
+    // Set version number
+    const versionEl = document.getElementById('app-version');
+    if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
     
     // Explicit global synchronization fallback interval
     setInterval(triggerGlobalUpdate, 3600000);

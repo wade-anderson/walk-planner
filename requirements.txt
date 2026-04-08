@@ -32,7 +32,7 @@ These are requirements for a walk planner app.
     the walk should be considered go for that day.
     Tide should not be considered for future walk forecasts.
 13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
-
+14. Should have a version number that starts with 1.0.0.
 
 
 Style
@@ -63,3 +63,4 @@ Style
 14. When a walk is no go, it should have a light red background on the walk card.
 15. Have a button above Settings that shows the last time weather data was fetched plus "[Update]".
     Pressing this button should update the weather data for all walks.
+16. Should show the version number on the bottom of the settings screen.
