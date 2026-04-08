@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.1.5';
+const APP_VERSION = '1.1.6';
 
 // --- State ---
 let db;
@@ -543,10 +543,15 @@ function setupEventListeners() {
 
     exportBtn.addEventListener('click', async () => {
         const walks = await getAllWalks();
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walks, null, 2));
+        const exportData = {
+            version: APP_VERSION,
+            settings: userSettings,
+            walks: walks
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
         const anchor = document.createElement('a');
         anchor.setAttribute("href", dataStr);
-        anchor.setAttribute("download", "walk_planner_backup.json");
+        anchor.setAttribute("download", `walk_planner_backup_${new Date().toISOString().split('T')[0]}.json`);
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
@@ -562,18 +567,40 @@ function setupEventListeners() {
         reader.onload = async (event) => {
             try {
                 const importedData = JSON.parse(event.target.result);
-                if (Array.isArray(importedData)) {
-                    for (const walk of importedData) {
-                        delete walk.id; // Force IndexedDB to generate a new clean ID
-                        await addWalk(walk);
+                
+                // 1. Wipe current walk data as requested
+                await clearAllWalks();
+
+                let walksToImport = [];
+                
+                // 2. Detect Format
+                if (importedData.walks && Array.isArray(importedData.walks)) {
+                    // NEW Consolidated Format
+                    walksToImport = importedData.walks;
+                    
+                    if (importedData.settings) {
+                        userSettings = { ...userSettings, ...importedData.settings };
+                        localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+                        loadSettings(); // Refresh UI with imported settings
                     }
-                    await renderWalks();
-                    alert("Backup data imported successfully!");
+                } else if (Array.isArray(importedData)) {
+                    // LEGACY Format (just an array of walks)
+                    walksToImport = importedData;
                 } else {
-                    alert("Invalid backup format.");
+                    throw new Error("Invalid backup format");
                 }
+
+                // 3. Import walks
+                for (const walk of walksToImport) {
+                    delete walk.id; // Force IndexedDB to generate a new clean ID
+                    await addWalk(walk);
+                }
+
+                await renderWalks();
+                alert("Backup data restored successfully!");
             } catch (err) {
-                alert("Error importing backup data.");
+                console.error(err);
+                alert("Error importing backup data. Ensure the file is a valid JSON backup.");
             }
             importFile.value = ''; // reset so we can upload same file again if desired
         };

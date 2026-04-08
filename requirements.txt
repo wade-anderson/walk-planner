@@ -16,10 +16,10 @@ These are requirements for a walk planner app.
     4. It should not be raining per settings.
 10. Should have a Settings button on the bottom. 
 11. Settings import/export.
-    Should have buttons to export and import all data in JSON format for backup.
-    Should have a button to delete all data.
-    These buttons should be in Settings.
-    These should be on the bottom of settings screen.
+    The Export function shall generate a unified JSON backup file containing both User Settings and the full list of Walks.
+    The Import function shall detect and handle either unified backups or legacy walk-only arrays.
+    The Import function shall permanently clear existing walk data before restoring the backup.
+    Should have a button to delete all data in Settings.
 11a. Settings go/no go parameters.
     Should have feels like temperature min and max.
     Should have wind speed max.
@@ -31,7 +31,7 @@ These are requirements for a walk planner app.
     the walk should be considered go for that day.
     Tide status is excluded from the daily "Go" summary on the main list to prioritize weather window visibility.
 13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
-14. Should have a version number that starts with 1.1.5.
+14. Should have a version number that starts with 1.1.6.
 
 
 Style

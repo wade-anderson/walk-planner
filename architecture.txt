@@ -10,7 +10,7 @@ This is the architecture for a walk planner app.
 8. The UI is constructed using overlay layer routing (List View, Editor View, Settings View) designed with modern Glassmorphism aesthetics.
 9. The application state relies on a 60-minute asynchronous polling loop that continually extracts live climatic conditions. Settings are persisted in `localStorage`, while walk data and last-notified states are stored in `IndexedDB`.
 10. The sorting logic utilizes CSS Flexbox `order` injection to dynamically shift optimal "Go" walks physically above substandard "No-Go" walks in real-time.
-11. Data preservation is handled via native Javascript `Blob` JSON serialization for database exportation, and the native `FileReader API` for backup ingestion.
+11. Data preservation is handled via native Javascript `Blob` JSON serialization for unified database and settings exportation, and the native `FileReader API` for backup ingestion and reconstruction.
 12. The application utilizes a Progressive Web App (PWA) architecture with a `manifest.json`. The Service Worker (`sw.js`) uses `self.skipWaiting()` and `clients.claim()` for immediate version takeover upon update.
 13. The Service Worker implements an "Offline-First" caching strategy using the `Cache Storage API` to preserve UI and Leaflet map resources.
 14. The system leverages the browser `Notification API` for background alerts. A "Once-per-day" notification logic is implemented in `app.js`, checking the `lastNotifiedDate` stored in IndexedDB to prevent duplicate user alerts within a 24-hour window.
