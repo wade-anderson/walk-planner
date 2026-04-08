@@ -64,3 +64,11 @@ Style
 15. Have a button above Settings that shows the last time weather data was fetched plus "[Update]".
     Pressing this button should update the weather data for all walks.
 16. Should show the version number on the bottom of the settings screen.
+17. PWA (Progressive Web App) Support:
+    1. The app shall include a Web App Manifest to allow installation on home screens.
+    2. The app shall use a Service Worker to cache HTML, CSS, JS, and map assets for offline use.
+    3. The app shall specify theme colors and use the project icon for its home screen shortcut.
+18. Push Notifications:
+    1. The app shall implement the Web Push API.
+    2. The app shall allow users to opt-in to notifications on their devices.
+    3. The app shall provide a toggle in the Settings view to enable or disable walk-ready notifications.
