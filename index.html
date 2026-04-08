@@ -81,21 +81,23 @@
                 <!-- Go/No-Go Parameters -->
                 <div class="settings-group" style="margin-bottom: 30px;">
                     <h2 style="font-size: 1.1rem; margin-bottom: 15px; color: var(--text-main);">Walk Parameters</h2>
-                    <div class="form-group">
-                        <label for="set-temp-min">Min Feels Like Temp (°F)</label>
-                        <input type="number" id="set-temp-min" value="68">
-                    </div>
-                    <div class="form-group">
-                        <label for="set-temp-max">Max Feels Like Temp (°F)</label>
-                        <input type="number" id="set-temp-max" value="80">
-                    </div>
-                    <div class="form-group">
-                        <label for="set-wind-max">Max Wind Speed (mph)</label>
-                        <input type="number" id="set-wind-max" value="15">
-                    </div>
-                    <div class="form-group">
-                        <label for="set-tide-window">Beach Tide Window (± hours)</label>
-                        <input type="number" id="set-tide-window" min="1" max="12" step="1" value="2">
+                    <div class="settings-grid">
+                        <div class="form-group">
+                            <label for="set-temp-min">Min Feels Like Temp (°F)</label>
+                            <input type="number" id="set-temp-min" value="68">
+                        </div>
+                        <div class="form-group">
+                            <label for="set-temp-max">Max Feels Like Temp (°F)</label>
+                            <input type="number" id="set-temp-max" value="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="set-wind-max">Max Wind Speed (mph)</label>
+                            <input type="number" id="set-wind-max" value="15">
+                        </div>
+                        <div class="form-group">
+                            <label for="set-tide-window">Beach Tide Window (± hours)</label>
+                            <input type="number" id="set-tide-window" min="1" max="12" step="1" value="2">
+                        </div>
                     </div>
                     <div class="form-group toggle-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 15px;">
                         <input type="checkbox" id="set-no-rain" checked style="width: auto; transform: scale(1.2);">
