@@ -72,3 +72,4 @@ Style
     2. The app shall allow users to opt-in to notifications on their devices.
     3. The app shall provide a toggle in the Settings view to enable or disable walk-ready notifications.
     4. The app shall notify the user when a walk is a go for the first time each day.
+19. Should always scroll to the top walk information view when it is opened.

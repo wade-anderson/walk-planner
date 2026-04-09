@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.1.8';
+const APP_VERSION = '1.1.9';
 
 // --- State ---
 let db;
@@ -789,9 +789,18 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
+function resetViewScroll() {
+    const panel = infoView.querySelector('.info-panel');
+    if (panel) panel.scrollTop = 0;
+    if (forecastLog) forecastLog.scrollTop = 0;
+}
+
 function openInformationView(walk) {
     listView.classList.add('hidden');
     infoView.classList.remove('hidden');
+    
+    // Initial reset
+    resetViewScroll();
     
     infoTitle.textContent = walk.name;
     infoEditBtn.onclick = () => {
@@ -913,13 +922,21 @@ function openInformationView(walk) {
                 htmlAssembler += `</div>`;
             }
             forecastLog.innerHTML = htmlAssembler;
+            resetViewScroll();
         } else {
             forecastLog.innerHTML = `<p style="color:var(--text-muted);">Forecast calculating...</p>`;
+            resetViewScroll();
         }
     } else {
         infoCurrentBody.innerHTML = `<p style="color:var(--text-muted);">Calculating live conditions...</p>`;
         forecastLog.innerHTML = `<p style="color:var(--text-muted);">Calculating live forecasts...</p>`;
+        resetViewScroll();
     }
+
+    // Double RAF safety reset to ensure layout is complete and browser scroll restoration is bypassed
+    requestAnimationFrame(() => {
+        requestAnimationFrame(resetViewScroll);
+    });
 }
 
 // UI details accordion handler
