@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.2.0';
 
 // --- State ---
 let db;
@@ -20,7 +20,8 @@ let userSettings = {
     tempMax: 80,
     windMax: 15,
     tideWindow: 2,
-    noRain: true
+    noRain: true,
+    allowNotifications: false
 };
 
 function loadSettings() {
@@ -35,12 +36,16 @@ function loadSettings() {
     const setWindMaxInput = document.getElementById('set-wind-max');
     const setTideWindowInput = document.getElementById('set-tide-window');
     const setNoRainInput = document.getElementById('set-no-rain');
+    const setNotificationsInput = document.getElementById('set-notifications');
     
     if (setTempMinInput) setTempMinInput.value = userSettings.tempMin;
     if (setTempMaxInput) setTempMaxInput.value = userSettings.tempMax;
     if (setWindMaxInput) setWindMaxInput.value = userSettings.windMax;
     if (setTideWindowInput) setTideWindowInput.value = userSettings.tideWindow;
     if (setNoRainInput) setNoRainInput.checked = userSettings.noRain;
+    if (setNotificationsInput) {
+        setNotificationsInput.checked = userSettings.allowNotifications;
+    }
 }
 
 function saveSettings() {
@@ -49,6 +54,7 @@ function saveSettings() {
     const setWindMaxInput = document.getElementById('set-wind-max');
     const setTideWindowInput = document.getElementById('set-tide-window');
     const setNoRainInput = document.getElementById('set-no-rain');
+    const setNotificationsInput = document.getElementById('set-notifications');
 
     if (setTempMinInput) userSettings.tempMin = parseFloat(setTempMinInput.value);
     if (setTempMaxInput) userSettings.tempMax = parseFloat(setTempMaxInput.value);
@@ -56,7 +62,41 @@ function saveSettings() {
     if (setTideWindowInput) userSettings.tideWindow = parseInt(setTideWindowInput.value, 10);
     if (setNoRainInput) userSettings.noRain = setNoRainInput.checked;
     
+    if (setNotificationsInput) {
+        if (setNotificationsInput.checked && !userSettings.allowNotifications) {
+            requestNotificationPermission();
+        }
+        userSettings.allowNotifications = setNotificationsInput.checked;
+    }
+    
     localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+}
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.warn('This browser does not support desktop notifications');
+        return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+        console.log('Notification permission granted.');
+    }
+}
+
+async function checkAndSendGoNotification(walk) {
+    if (!userSettings.allowNotifications || !('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const today = new Date().toISOString().split('T')[0];
+    if (walk.lastNotifiedDate === today) return;
+
+    new Notification('Walk Planner', {
+        body: `${walk.name} is a GO! Enjoy your walk.`,
+        icon: 'icon.png'
+    });
+
+    walk.lastNotifiedDate = today;
+    await updateWalk(walk);
 }
 
 // --- DOM Elements ---
@@ -74,10 +114,13 @@ const editorDeleteBtn = document.getElementById('editor-delete-btn');
 const listView = document.getElementById('list-view');
 const editorView = document.getElementById('editor-view');
 const settingsView = document.getElementById('settings-view');
+const dataView = document.getElementById('data-view');
 const infoView = document.getElementById('info-view');
 
 const addWalkBtn = document.getElementById('add-walk-btn');
 const settingsBackBtn = document.getElementById('settings-back-btn');
+const manageDataBtn = document.getElementById('manage-data-btn');
+const dataBackBtn = document.getElementById('data-back-btn');
 const infoBackBtn = document.getElementById('info-back-btn');
 const infoEditBtn = document.getElementById('info-edit-btn');
 const infoTitle = document.getElementById('info-title');
@@ -98,6 +141,23 @@ async function initApp() {
     
     // Explicit global synchronization fallback interval
     setInterval(triggerGlobalUpdate, 3600000);
+
+    // Register Service Worker for PWA / Offline support
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW: Registered', reg))
+                .catch(err => console.error('SW: Failed', err));
+        });
+
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+                refreshing = true;
+                window.location.reload();
+            }
+        });
+    }
 }
 
 // --- Map Logic ---
@@ -371,6 +431,7 @@ async function evaluateWalkStatus(walk, li) {
         if (isGo) {
             li.classList.add('walk-go');
             li.style.order = 1;
+            checkAndSendGoNotification(walk);
         } else {
             li.classList.add('walk-nogo');
             li.style.order = 2;
@@ -434,9 +495,19 @@ async function evaluateWalkStatus(walk, li) {
 function setupEventListeners() {
     settingsBackBtn.addEventListener('click', async () => {
         saveSettings();
-        document.getElementById('settings-view').classList.add('hidden');
-        document.getElementById('list-view').classList.remove('hidden');
+        settingsView.classList.add('hidden');
+        listView.classList.remove('hidden');
         await renderWalks();
+    });
+
+    manageDataBtn.addEventListener('click', () => {
+        settingsView.classList.add('hidden');
+        dataView.classList.remove('hidden');
+    });
+
+    dataBackBtn.addEventListener('click', () => {
+        dataView.classList.add('hidden');
+        settingsView.classList.remove('hidden');
     });
 
     form.addEventListener('submit', handleFormSubmit);
@@ -489,12 +560,19 @@ function setupEventListeners() {
     const importFile = document.getElementById('import-file');
     const deleteAllBtn = document.getElementById('delete-all-btn');
 
+
+
     exportBtn.addEventListener('click', async () => {
         const walks = await getAllWalks();
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walks, null, 2));
+        const exportData = {
+            version: APP_VERSION,
+            settings: userSettings,
+            walks: walks
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
         const anchor = document.createElement('a');
         anchor.setAttribute("href", dataStr);
-        anchor.setAttribute("download", "walk_planner_backup.json");
+        anchor.setAttribute("download", `walk_planner_backup_${new Date().toISOString().split('T')[0]}.json`);
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
@@ -510,18 +588,40 @@ function setupEventListeners() {
         reader.onload = async (event) => {
             try {
                 const importedData = JSON.parse(event.target.result);
-                if (Array.isArray(importedData)) {
-                    for (const walk of importedData) {
-                        delete walk.id; // Force IndexedDB to generate a new clean ID
-                        await addWalk(walk);
+                
+                // 1. Wipe current walk data as requested
+                await clearAllWalks();
+
+                let walksToImport = [];
+                
+                // 2. Detect Format
+                if (importedData.walks && Array.isArray(importedData.walks)) {
+                    // NEW Consolidated Format
+                    walksToImport = importedData.walks;
+                    
+                    if (importedData.settings) {
+                        userSettings = { ...userSettings, ...importedData.settings };
+                        localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+                        loadSettings(); // Refresh UI with imported settings
                     }
-                    await renderWalks();
-                    alert("Backup data imported successfully!");
+                } else if (Array.isArray(importedData)) {
+                    // LEGACY Format (just an array of walks)
+                    walksToImport = importedData;
                 } else {
-                    alert("Invalid backup format.");
+                    throw new Error("Invalid backup format");
                 }
+
+                // 3. Import walks
+                for (const walk of walksToImport) {
+                    delete walk.id; // Force IndexedDB to generate a new clean ID
+                    await addWalk(walk);
+                }
+
+                await renderWalks();
+                alert("Backup data restored successfully!");
             } catch (err) {
-                alert("Error importing backup data.");
+                console.error(err);
+                alert("Error importing backup data. Ensure the file is a valid JSON backup.");
             }
             importFile.value = ''; // reset so we can upload same file again if desired
         };
@@ -536,15 +636,33 @@ function setupEventListeners() {
             setTimeout(() => {
                 if (deleteAllBtn.isConnected) {
                     deleteAllConfirm = false;
-                    deleteAllBtn.textContent = 'Delete All Data';
+                    deleteAllBtn.textContent = 'Delete all walks and settings';
                 }
             }, 3000);
         } else {
+            // Wipe everything
             await clearAllWalks();
+            localStorage.removeItem('walkSettings');
+            
+            // Reset state to defaults
+            userSettings = {
+                tempMin: 68,
+                tempMax: 80,
+                windMax: 15,
+                tideWindow: 2,
+                noRain: true,
+                allowNotifications: false
+            };
+            loadSettings(); // Reload UI with defaults
+            
             await renderWalks();
             deleteAllConfirm = false;
-            deleteAllBtn.textContent = 'Delete All Data';
-            alert("All walks deleted.");
+            deleteAllBtn.textContent = 'Delete all walks and settings';
+            alert("All walks and settings have been cleared.");
+            
+            // Return to settings
+            dataView.classList.add('hidden');
+            listView.classList.remove('hidden');
         }
     });
 }
@@ -702,9 +820,18 @@ function escapeHTML(str) {
     return div.innerHTML;
 }
 
+function resetViewScroll() {
+    const panel = infoView.querySelector('.info-panel');
+    if (panel) panel.scrollTop = 0;
+    if (forecastLog) forecastLog.scrollTop = 0;
+}
+
 function openInformationView(walk) {
     listView.classList.add('hidden');
     infoView.classList.remove('hidden');
+    
+    // Initial reset
+    resetViewScroll();
     
     infoTitle.textContent = walk.name;
     infoEditBtn.onclick = () => {
@@ -826,13 +953,21 @@ function openInformationView(walk) {
                 htmlAssembler += `</div>`;
             }
             forecastLog.innerHTML = htmlAssembler;
+            resetViewScroll();
         } else {
             forecastLog.innerHTML = `<p style="color:var(--text-muted);">Forecast calculating...</p>`;
+            resetViewScroll();
         }
     } else {
         infoCurrentBody.innerHTML = `<p style="color:var(--text-muted);">Calculating live conditions...</p>`;
         forecastLog.innerHTML = `<p style="color:var(--text-muted);">Calculating live forecasts...</p>`;
+        resetViewScroll();
     }
+
+    // Double RAF safety reset to ensure layout is complete and browser scroll restoration is bypassed
+    requestAnimationFrame(() => {
+        requestAnimationFrame(resetViewScroll);
+    });
 }
 
 // UI details accordion handler

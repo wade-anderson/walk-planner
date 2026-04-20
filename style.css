@@ -320,7 +320,7 @@ textarea:focus {
     z-index: 10;
 }
 
-#list-view, #settings-view {
+#list-view, #settings-view, #data-view, #info-view {
     z-index: 10;
     display: flex;
     justify-content: center;
@@ -332,7 +332,7 @@ textarea:focus {
     z-index: 20;
 }
 
-#list-view .panel-container, #settings-view .panel-container {
+#list-view .panel-container, #settings-view .panel-container, #data-view .panel-container, #info-view .panel-container {
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
@@ -580,9 +580,15 @@ textarea:focus {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
-    #list-view .panel-container, #settings-view .panel-container {
+    #list-view, #settings-view, #data-view, #info-view {
+        align-items: flex-start;
+        overflow-y: auto;
+    }
+
+    #list-view .panel-container, #settings-view .panel-container, #data-view .panel-container, #info-view .panel-container {
         max-width: 100%;
-        max-height: 100vh;
+        max-height: none;
+        min-height: 100vh;
         border-radius: 0;
         border: none;
     }
