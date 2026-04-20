@@ -79,7 +79,7 @@
             <header class="header" style="margin-bottom: 5px; text-align: center;">
                 <h1 style="font-size: 1.5rem;">Settings</h1>
             </header>
-            <div id="app-version" style="text-align: center; margin-bottom: 24px; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8;">v1.1.9</div>
+            <div id="app-version" style="text-align: center; margin-bottom: 24px; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8;">v1.2.0</div>
             <section class="settings-section">
                 <!-- Go/No-Go Parameters -->
                 <div class="settings-group" style="margin-bottom: 30px;">
@@ -112,18 +112,35 @@
                     </div>
                 </div>
 
-                <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 20px 0;"></div>
-
-                <div class="data-actions" style="display: flex; flex-direction: column; gap: 15px;">
-                    <h2 style="font-size: 1.1rem; margin-bottom: 5px; color: var(--text-main);">Data Management</h2>
-                    <button type="button" id="export-btn" class="btn btn-primary" style="font-size: 0.95rem;">Export JSON Backup</button>
-                    <button type="button" id="import-btn" class="btn btn-secondary" style="font-size: 0.95rem;">Import JSON Backup</button>
-                    <input type="file" id="import-file" accept=".json" style="display: none;">
-                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.95rem; margin-top: 10px;">Delete All Data</button>
+                <div class="settings-nav" style="display: flex; flex-direction: column; gap: 10px;">
+                    <button type="button" id="manage-data-btn" class="btn btn-secondary" style="width: 100%;">Data Management</button>
+                    <button type="button" id="settings-back-btn" class="btn btn-primary" style="width: 100%;">Done</button>
                 </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Data Management View -->
+    <div id="data-view" class="view-container hidden">
+        <div class="panel-container glassmorphism" style="padding: 30px;">
+            <header class="header" style="margin-bottom: 5px; text-align: center;">
+                <h1 style="font-size: 1.5rem;">Data Management</h1>
+            </header>
+            <p style="text-align: center; margin-bottom: 24px; font-size: 0.9rem; color: var(--text-muted);">Backup, restore, or wipe your local app data.</p>
+            
+            <section class="data-section">
+                <div class="data-actions" style="display: flex; flex-direction: column; gap: 15px;">
+                    <button type="button" id="export-btn" class="btn btn-primary" style="font-size: 0.95rem;">Export walks and settings</button>
+                    <button type="button" id="import-btn" class="btn btn-secondary" style="font-size: 0.95rem;">Import walks and settings</button>
+                    <input type="file" id="import-file" accept=".json" style="display: none;">
+                    
+                    <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 10px 0;"></div>
+                    
+                    <button type="button" id="delete-all-btn" class="btn btn-danger" style="font-size: 0.95rem;">Delete all walks and settings</button>
+                </div>
+                
                 <div style="margin-top: 30px;">
-                    <!-- App JS now handles the onclick hide and save logic -->
-                    <button type="button" id="settings-back-btn" class="btn btn-secondary" style="width: 100%;">Done</button>
+                    <button type="button" id="data-back-btn" class="btn btn-secondary" style="width: 100%;">Back</button>
                 </div>
             </section>
         </div>

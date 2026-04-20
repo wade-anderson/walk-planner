@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.1.9';
+const APP_VERSION = '1.2.0';
 
 // --- State ---
 let db;
@@ -114,10 +114,13 @@ const editorDeleteBtn = document.getElementById('editor-delete-btn');
 const listView = document.getElementById('list-view');
 const editorView = document.getElementById('editor-view');
 const settingsView = document.getElementById('settings-view');
+const dataView = document.getElementById('data-view');
 const infoView = document.getElementById('info-view');
 
 const addWalkBtn = document.getElementById('add-walk-btn');
 const settingsBackBtn = document.getElementById('settings-back-btn');
+const manageDataBtn = document.getElementById('manage-data-btn');
+const dataBackBtn = document.getElementById('data-back-btn');
 const infoBackBtn = document.getElementById('info-back-btn');
 const infoEditBtn = document.getElementById('info-edit-btn');
 const infoTitle = document.getElementById('info-title');
@@ -492,9 +495,19 @@ async function evaluateWalkStatus(walk, li) {
 function setupEventListeners() {
     settingsBackBtn.addEventListener('click', async () => {
         saveSettings();
-        document.getElementById('settings-view').classList.add('hidden');
-        document.getElementById('list-view').classList.remove('hidden');
+        settingsView.classList.add('hidden');
+        listView.classList.remove('hidden');
         await renderWalks();
+    });
+
+    manageDataBtn.addEventListener('click', () => {
+        settingsView.classList.add('hidden');
+        dataView.classList.remove('hidden');
+    });
+
+    dataBackBtn.addEventListener('click', () => {
+        dataView.classList.add('hidden');
+        settingsView.classList.remove('hidden');
     });
 
     form.addEventListener('submit', handleFormSubmit);
@@ -623,15 +636,33 @@ function setupEventListeners() {
             setTimeout(() => {
                 if (deleteAllBtn.isConnected) {
                     deleteAllConfirm = false;
-                    deleteAllBtn.textContent = 'Delete All Data';
+                    deleteAllBtn.textContent = 'Delete all walks and settings';
                 }
             }, 3000);
         } else {
+            // Wipe everything
             await clearAllWalks();
+            localStorage.removeItem('walkSettings');
+            
+            // Reset state to defaults
+            userSettings = {
+                tempMin: 68,
+                tempMax: 80,
+                windMax: 15,
+                tideWindow: 2,
+                noRain: true,
+                allowNotifications: false
+            };
+            loadSettings(); // Reload UI with defaults
+            
             await renderWalks();
             deleteAllConfirm = false;
-            deleteAllBtn.textContent = 'Delete All Data';
-            alert("All walks deleted.");
+            deleteAllBtn.textContent = 'Delete all walks and settings';
+            alert("All walks and settings have been cleared.");
+            
+            // Return to settings
+            dataView.classList.add('hidden');
+            listView.classList.remove('hidden');
         }
     });
 }

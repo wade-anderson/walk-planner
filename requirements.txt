@@ -73,3 +73,7 @@ Style
     3. The app shall provide a toggle in the Settings view to enable or disable walk-ready notifications.
     4. The app shall notify the user when a walk is a go for the first time each day.
 19. Should always scroll to the top walk information view when it is opened.
+20. Data management should be on it's own screen accessible from the Settings screen via a button.  It should have the following:
+    1. Export walks and settings.
+    2. Import walks and settings.
+    3. Delete all walks and settings.
