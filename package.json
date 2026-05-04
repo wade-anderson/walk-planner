@@ -1,0 +1,27 @@
+{
+  "name": "walk-planner",
+  "version": "1.0.0",
+  "description": "A modern, high-performance Progressive Web App (PWA) designed to help you find the perfect time for your walks based on real-time weather and tidal conditions.",
+  "main": "app.js",
+  "scripts": {
+    "dev": "http-server -c-1",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wade-anderson/walk-planner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wade-anderson/walk-planner/issues"
+  },
+  "homepage": "https://github.com/wade-anderson/walk-planner#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "http-server": "^14.1.1",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0"
+  }
+}

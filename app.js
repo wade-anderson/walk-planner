@@ -294,7 +294,9 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
     if (!el) return;
     
     try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&hourly=apparent_temperature,wind_speed_10m,weather_code,is_day&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+        const safeLat = Number(lat) || 0;
+        const safeLng = Number(lng) || 0;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${safeLat}&longitude=${safeLng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&hourly=apparent_temperature,wind_speed_10m,weather_code,is_day&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Weather fetch failed');
         const data = await res.json();
@@ -333,7 +335,9 @@ async function fetchInlineTide(lat, lng, elementId) {
     if (!el) return;
     
     try {
-        const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=sea_level_height_msl&timezone=auto`;
+        const safeLat = Number(lat) || 0;
+        const safeLng = Number(lng) || 0;
+        const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${safeLat}&longitude=${safeLng}&hourly=sea_level_height_msl&timezone=auto`;
         const res = await fetch(url);
         if (!res.ok) throw new Error('Marine fetch failed');
         const data = await res.json();
@@ -569,13 +573,15 @@ function setupEventListeners() {
             settings: userSettings,
             walks: walks
         };
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
         const anchor = document.createElement('a');
-        anchor.setAttribute("href", dataStr);
+        anchor.setAttribute("href", url);
         anchor.setAttribute("download", `walk_planner_backup_${new Date().toISOString().split('T')[0]}.json`);
         document.body.appendChild(anchor);
         anchor.click();
         anchor.remove();
+        URL.revokeObjectURL(url);
     });
 
     importBtn.addEventListener('click', () => importFile.click());
@@ -599,8 +605,14 @@ function setupEventListeners() {
                     // NEW Consolidated Format
                     walksToImport = importedData.walks;
                     
-                    if (importedData.settings) {
-                        userSettings = { ...userSettings, ...importedData.settings };
+                    if (importedData.settings && typeof importedData.settings === 'object') {
+                        const s = importedData.settings;
+                        if (s.tempMin !== undefined) userSettings.tempMin = Number(s.tempMin) || 68;
+                        if (s.tempMax !== undefined) userSettings.tempMax = Number(s.tempMax) || 80;
+                        if (s.windMax !== undefined) userSettings.windMax = Number(s.windMax) || 15;
+                        if (s.tideWindow !== undefined) userSettings.tideWindow = parseInt(s.tideWindow, 10) || 2;
+                        if (s.noRain !== undefined) userSettings.noRain = Boolean(s.noRain);
+                        if (s.allowNotifications !== undefined) userSettings.allowNotifications = Boolean(s.allowNotifications);
                         localStorage.setItem('walkSettings', JSON.stringify(userSettings));
                         loadSettings(); // Refresh UI with imported settings
                     }
@@ -613,8 +625,15 @@ function setupEventListeners() {
 
                 // 3. Import walks
                 for (const walk of walksToImport) {
-                    delete walk.id; // Force IndexedDB to generate a new clean ID
-                    await addWalk(walk);
+                    if (!walk || typeof walk !== 'object') continue;
+                    const cleanWalk = {
+                        name: String(walk.name || 'Unnamed Walk').substring(0, 100),
+                        isBeach: Boolean(walk.isBeach),
+                        lat: Number(walk.lat) || 0,
+                        lng: Number(walk.lng) || 0,
+                        updatedAt: Number(walk.updatedAt) || Date.now()
+                    };
+                    await addWalk(cleanWalk);
                 }
 
                 await renderWalks();
@@ -739,7 +758,7 @@ async function renderWalks() {
 
     const networkPromises = [];
 
-    walks.forEach(walk => {
+    walks.forEach((walk, index) => {
         const li = document.createElement('li');
         li.className = 'walk-item';
         
@@ -769,7 +788,12 @@ async function renderWalks() {
 
         walksList.appendChild(li);
         
-        networkPromises.push(evaluateWalkStatus(walk, li));
+        // Stagger requests to avoid Open-Meteo rate limiting (approx 200ms per walk)
+        const delay = index * 200;
+        const delayedEvaluation = new Promise(resolve => {
+            setTimeout(() => resolve(evaluateWalkStatus(walk, li)), delay);
+        });
+        networkPromises.push(delayedEvaluation);
     });
     
     // Evaluate orchestrated network states across the entire domain!
@@ -815,9 +839,17 @@ function startEditing(walk) {
 }
 
 function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.innerText = str;
-    return div.innerHTML;
+    if (typeof str !== 'string') return '';
+    return str.replace(/[&<>"']/g, function(m) {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&#039;';
+            default: return m;
+        }
+    });
 }
 
 function resetViewScroll() {
