@@ -7,8 +7,6 @@ if (typeof structuredClone === 'undefined') {
     global.structuredClone = (val) => JSON.parse(JSON.stringify(val));
 }
 
-// Read app.js
-const appCode = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
 
 // Inject a full dummy DOM structure for app.js to attach to
 document.body.innerHTML = `
@@ -96,21 +94,9 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 // Mock alert
 window.alert = jest.fn();
 
-// Execute app.js in the context of JSDOM
-// We use eval here to ensure variables like `escapeHTML` and `fetchInlineWeather` become global
-// We explicitly attach let/const variables to window so they are accessible in tests
-window.eval(appCode + "\n; window.userSettings = userSettings; window.db = db; window.initApp = initApp; window.initMap = initMap;");
+// Require app.js directly so Jest can instrument it for coverage
+const app = require('./app.js');
 
 // Ensure globals are shared with Node's global for easy access in tests
-global.escapeHTML = window.escapeHTML;
-global.fetchInlineWeather = window.fetchInlineWeather;
-global.evaluateWalkStatus = window.evaluateWalkStatus;
-global.initDB = window.initDB;
-global.addWalk = window.addWalk;
-global.updateWalk = window.updateWalk;
-global.deleteWalk = window.deleteWalk;
-global.getAllWalks = window.getAllWalks;
-global.clearAllWalks = window.clearAllWalks;
-global.saveSettings = window.saveSettings;
-global.loadSettings = window.loadSettings;
-global.userSettings = window.userSettings;
+Object.assign(window, app);
+Object.assign(global, app);

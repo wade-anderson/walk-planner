@@ -1019,3 +1019,9 @@ function toggleDailyDetails(btn) {
 
 // Start
 document.addEventListener('DOMContentLoaded', initApp);
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        escapeHTML, fetchInlineWeather, evaluateWalkStatus, initDB, addWalk, updateWalk, deleteWalk, getAllWalks, clearAllWalks, saveSettings, loadSettings, userSettings, initApp, initMap, fetchInlineTide
+    };
+}
