@@ -1,5 +1,5 @@
 // Commit: 7
-const CACHE_NAME = 'walk-planner-v1.3.1';
+const CACHE_NAME = 'walk-planner-v1.3.3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

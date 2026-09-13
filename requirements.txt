@@ -11,7 +11,8 @@ These are requirements for a walk planner app.
     show the next low tide time on the walk card.
 9. Walks have a go or no go status.  Walks are no go unless they meet the following criteria:
     1. Feels like temperature is between settings min and max.
-    2. Wind speed is below settings wind speed max.
+    2. Wind speed is below settings wind speed max (only used as a factor if the temperature is in the bottom half of the specified range).
+    2a. Wind speed does not exceed max safety wind speed of 30 mph (in effect for the full temperature range; anytime wind is over this value, walk status is no go / red).
     3. If it's a beach walk, the tide should be within settings beach tide window plus or minus of low tide.
     4. It should not be raining per settings.
 10. Should have a Settings button on the bottom. 

@@ -103,9 +103,11 @@ describe('Walk Planner', () => {
             expect(li.classList.contains('walk-go')).toBe(true);
         });
 
-        it('should mark a walk as NOGO when it is too windy', async () => {
+        it('should mark a walk as NOGO when it is too windy and temperature is in the bottom half of range', async () => {
             const walk = { id: 'test', name: 'Windy Walk', isBeach: false, lat: 51.5, lng: -0.1 };
             
+            // userSettings.tempMin = 68, tempMax = 80, windMax = 15 (midpoint = 74)
+            // apparent_temperature 72 is in the bottom half (<= 74)
             window.fetch = jest.fn().mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -116,6 +118,60 @@ describe('Walk Planner', () => {
 
             await evaluateWalkStatus(walk, li);
             expect(li.classList.contains('walk-nogo')).toBe(true);
+        });
+
+        it('should mark a walk as GO when it is windy but temperature is in the top half of the range', async () => {
+            const walk = { id: 'test', name: 'Warm Windy Walk', isBeach: false, lat: 51.5, lng: -0.1 };
+            
+            // userSettings.tempMin = 68, tempMax = 80, windMax = 15 (midpoint = 74)
+            // apparent_temperature 76 is in the top half (> 74), so max wind speed is not a factor
+            window.fetch = jest.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    current: { temperature_2m: 76, apparent_temperature: 76, wind_speed_10m: 25, weather_code: 0 },
+                    hourly: { time: [], apparent_temperature: [], wind_speed_10m: [], weather_code: [], is_day: [] }
+                })
+            });
+
+            await evaluateWalkStatus(walk, li);
+            expect(li.classList.contains('walk-go')).toBe(true);
+            expect(li.classList.contains('walk-nogo')).toBe(false);
+        });
+
+        it('should mark a walk as NOGO when wind exceeds safety max (30 mph) even in top half of temperature range', async () => {
+            const walk = { id: 'test', name: 'Dangerous Wind Walk', isBeach: false, lat: 51.5, lng: -0.1 };
+            
+            // userSettings.tempMin = 68, tempMax = 80, windMax = 15 (midpoint = 74)
+            // apparent_temperature 76 is in the top half, but wind 35 mph > SAFETY_WIND_MAX (30)
+            window.fetch = jest.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    current: { temperature_2m: 76, apparent_temperature: 76, wind_speed_10m: 35, weather_code: 0 },
+                    hourly: { time: [], apparent_temperature: [], wind_speed_10m: [], weather_code: [], is_day: [] }
+                })
+            });
+
+            await evaluateWalkStatus(walk, li);
+            expect(li.classList.contains('walk-nogo')).toBe(true);
+            expect(li.classList.contains('walk-go')).toBe(false);
+        });
+
+        it('should mark a walk as GO when wind is at safety max (30 mph) in top half of temperature range', async () => {
+            const walk = { id: 'test', name: 'Max Safe Wind Walk', isBeach: false, lat: 51.5, lng: -0.1 };
+            
+            // userSettings.tempMin = 68, tempMax = 80, windMax = 15 (midpoint = 74)
+            // apparent_temperature 76 is in top half, wind 30 mph == SAFETY_WIND_MAX (not over 30)
+            window.fetch = jest.fn().mockResolvedValue({
+                ok: true,
+                json: async () => ({
+                    current: { temperature_2m: 76, apparent_temperature: 76, wind_speed_10m: 30, weather_code: 0 },
+                    hourly: { time: [], apparent_temperature: [], wind_speed_10m: [], weather_code: [], is_day: [] }
+                })
+            });
+
+            await evaluateWalkStatus(walk, li);
+            expect(li.classList.contains('walk-go')).toBe(true);
+            expect(li.classList.contains('walk-nogo')).toBe(false);
         });
 
         it('should mark a beach walk as NOGO during high tide', async () => {
@@ -181,6 +237,46 @@ describe('Walk Planner', () => {
             expect(beachLowTideStatus.isDaylight).toBe(true);
             expect(beachLowTideStatus.isHourGo).toBe(true);
             expect(beachLowTideStatus.tideDescStr).toContain('Low Tide');
+        });
+
+        it('evaluateHourStatus should only use wind max as a factor when temperature is in bottom half of specified range', () => {
+            const walkNormal = { isBeach: false };
+            const tideData = null;
+            // userSettings: tempMin: 68, tempMax: 80, midpoint: 74, windMax: 15
+            const hourly = {
+                time: ['2026-09-13T10:00:00'],
+                is_day: [1],
+                apparent_temperature: [70], // Bottom half (< 74)
+                wind_speed_10m: [20],       // Exceeds windMax (15)
+                weather_code: [0]
+            };
+
+            // 1. Temperature in bottom half (70°F) + excessive wind (20 mph) -> NOGO
+            const bottomHalfStatus = evaluateHourStatus(hourly, 0, walkNormal, tideData);
+            expect(bottomHalfStatus.isHourGo).toBe(false);
+
+            // 2. Temperature at midpoint (74°F) + excessive wind (20 mph) -> NOGO (bottom half includes midpoint)
+            hourly.apparent_temperature = [74];
+            const midpointStatus = evaluateHourStatus(hourly, 0, walkNormal, tideData);
+            expect(midpointStatus.isHourGo).toBe(false);
+
+            // 3. Temperature in top half (75°F) + excessive wind (20 mph) -> GO (wind is not a factor)
+            hourly.apparent_temperature = [75];
+            const topHalfStatus = evaluateHourStatus(hourly, 0, walkNormal, tideData);
+            expect(topHalfStatus.isHourGo).toBe(true);
+
+            // 4. Temperature in top half (75°F) + light wind (5 mph) -> GO
+            hourly.wind_speed_10m = [5];
+            expect(evaluateHourStatus(hourly, 0, walkNormal, tideData).isHourGo).toBe(true);
+
+            // 5. Temperature in top half (78°F) + excessive wind over safety max (32 mph) -> NOGO (safety limit applies to full temperature range)
+            hourly.apparent_temperature = [78];
+            hourly.wind_speed_10m = [32];
+            expect(evaluateHourStatus(hourly, 0, walkNormal, tideData).isHourGo).toBe(false);
+
+            // 6. Temperature in top half (78°F) + wind exactly at safety max (30 mph) -> GO
+            hourly.wind_speed_10m = [30];
+            expect(evaluateHourStatus(hourly, 0, walkNormal, tideData).isHourGo).toBe(true);
         });
 
         it('should mark daily forecast badge as NOGO if daylight hours fail beach tide constraints', async () => {

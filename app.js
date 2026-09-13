@@ -2,7 +2,8 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.3.3';
+const SAFETY_WIND_MAX = 30; // Max safety wind speed in mph across full temperature range
 
 // --- State ---
 let db;
@@ -410,7 +411,11 @@ function evaluateHourStatus(hourly, i, walk, tideData) {
     const wCode = hourly.weather_code ? hourly.weather_code[i] : null;
 
     const isTempOk = temp !== null && temp >= userSettings.tempMin && temp <= userSettings.tempMax;
-    const isWindOk = wind !== null && wind < userSettings.windMax;
+    const tempMid = (userSettings.tempMin + userSettings.tempMax) / 2;
+    const isBottomHalf = temp !== null && temp <= tempMid;
+    const isWindOverSafety = wind !== null && wind > SAFETY_WIND_MAX;
+    const isWindUnderMax = wind !== null && wind < userSettings.windMax;
+    const isWindOk = !isWindOverSafety && (!isBottomHalf || isWindUnderMax);
     const isWeatherOk = !userSettings.noRain || (wCode !== null && wCode < 50);
 
     let isHourGo = isTempOk && isWindOk && isWeatherOk;
@@ -463,8 +468,13 @@ async function evaluateWalkStatus(walk, li) {
         // Rule: Feels like temperature is between settings boundaries
         if (weatherData.feelsLike < userSettings.tempMin || weatherData.feelsLike > userSettings.tempMax) isGo = false;
         
-        // Rule: Wind speed is below max settings
-        if (weatherData.wind >= userSettings.windMax) isGo = false;
+        // Rule: Wind speed is below max settings only if temperature is in the bottom half of the specified range
+        const tempMid = (userSettings.tempMin + userSettings.tempMax) / 2;
+        const isBottomHalf = weatherData.feelsLike <= tempMid;
+        if (isBottomHalf && weatherData.wind >= userSettings.windMax) isGo = false;
+        
+        // Rule: Max safety wind speed (30 mph) in effect for the full temperature range
+        if (weatherData.wind > SAFETY_WIND_MAX) isGo = false;
         
         // Rule: It should not be raining per settings
         if (userSettings.noRain && weatherData.weatherCode >= 50) isGo = false;
@@ -1037,6 +1047,6 @@ document.addEventListener('DOMContentLoaded', initApp);
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        escapeHTML, fetchInlineWeather, evaluateWalkStatus, evaluateHourStatus, initDB, addWalk, updateWalk, deleteWalk, getAllWalks, clearAllWalks, saveSettings, loadSettings, userSettings, initApp, initMap, fetchInlineTide
+        escapeHTML, fetchInlineWeather, evaluateWalkStatus, evaluateHourStatus, initDB, addWalk, updateWalk, deleteWalk, getAllWalks, clearAllWalks, saveSettings, loadSettings, userSettings, initApp, initMap, fetchInlineTide, SAFETY_WIND_MAX
     };
 }
