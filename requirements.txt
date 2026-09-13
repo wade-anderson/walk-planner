@@ -29,7 +29,7 @@ These are requirements for a walk planner app.
     Should show the walk go/no-go status for the next 7 days on the walk card.
     Go/no go should be evaluated for each hour of daylight.  If there is at least one hour of go, 
     the walk should be considered go for that day.
-    Tide status is excluded from the daily "Go" summary on the main list to prioritize weather window visibility.
+    For beach walks, tide status constraints (within tide window of low tide) are included when evaluating daylight hours for the daily "Go" summary on the walk card, matching the extended forecast evaluation.
 13. Keep track of the last time weather data was fetched.  Only update it if all walks are updated.
 14. Should have a version number that starts with 1.1.8.
 

@@ -146,6 +146,80 @@ describe('Walk Planner', () => {
             await evaluateWalkStatus(walk, li);
             expect(li.classList.contains('walk-nogo')).toBe(true);
         });
+
+        it('evaluateHourStatus should correctly evaluate weather and tide constraints', () => {
+            const walkBeach = { isBeach: true };
+            const walkNormal = { isBeach: false };
+            const tideData = {
+                lowTideIndices: [16], // low tide at index 16 (16:00 / 4 PM)
+                times: Array.from({ length: 24 }, (_, i) => `2026-09-13T${String(i).padStart(2, '0')}:00`)
+            };
+            const hourly = {
+                time: Array.from({ length: 24 }, (_, i) => `2026-09-13T${String(i).padStart(2, '0')}:00`),
+                is_day: Array.from({ length: 24 }, (_, i) => (i >= 8 && i <= 19 ? 1 : 0)),
+                apparent_temperature: Array(24).fill(74), // within 68-80
+                wind_speed_10m: Array(24).fill(5),       // < 15
+                weather_code: Array(24).fill(0)          // clear
+            };
+
+            // Non-daylight hour (e.g. index 2 = 2 AM)
+            expect(evaluateHourStatus(hourly, 2, walkBeach, tideData).isDaylight).toBe(false);
+
+            // Normal walk at daylight hour (index 10 = 10 AM)
+            const normalStatus = evaluateHourStatus(hourly, 10, walkNormal, tideData);
+            expect(normalStatus.isDaylight).toBe(true);
+            expect(normalStatus.isHourGo).toBe(true);
+
+            // Beach walk at 10 AM (index 10: 6 hours from 16:00, outside tide window of +-2)
+            const beachMorningStatus = evaluateHourStatus(hourly, 10, walkBeach, tideData);
+            expect(beachMorningStatus.isDaylight).toBe(true);
+            expect(beachMorningStatus.isHourGo).toBe(false);
+            expect(beachMorningStatus.tideDescStr).toContain('High Tide');
+
+            // Beach walk at 4 PM (index 16: exactly low tide)
+            const beachLowTideStatus = evaluateHourStatus(hourly, 16, walkBeach, tideData);
+            expect(beachLowTideStatus.isDaylight).toBe(true);
+            expect(beachLowTideStatus.isHourGo).toBe(true);
+            expect(beachLowTideStatus.tideDescStr).toContain('Low Tide');
+        });
+
+        it('should mark daily forecast badge as NOGO if daylight hours fail beach tide constraints', async () => {
+            const walk = { id: 'test', name: 'Sunny Beach Walk', isBeach: true, lat: 25.0, lng: -80.0 };
+            const times = Array.from({ length: 24 }, (_, i) => `2026-09-13T${String(i).padStart(2, '0')}:00`);
+
+            window.fetch = jest.fn().mockImplementation((url) => {
+                if (url.includes('api.open-meteo.com')) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: async () => ({
+                            current: { temperature_2m: 72, apparent_temperature: 72, wind_speed_10m: 5, weather_code: 0 },
+                            hourly: {
+                                time: times,
+                                is_day: times.map((_, i) => (i >= 8 && i <= 19 ? 1 : 0)),
+                                apparent_temperature: Array(24).fill(72),
+                                wind_speed_10m: Array(24).fill(5),
+                                weather_code: Array(24).fill(0)
+                            }
+                        })
+                    });
+                } else if (url.includes('marine-api.open-meteo.com')) {
+                    return Promise.resolve({
+                        ok: true,
+                        json: async () => ({
+                            hourly: {
+                                time: times,
+                                sea_level_height_msl: times.map((_, i) => (i === 2 ? 0.1 : 3.0)) // low tide only at 2 AM (night)
+                            }
+                        })
+                    });
+                }
+            });
+
+            await evaluateWalkStatus(walk, li);
+            const badge = li.querySelector('.forecast-badge');
+            expect(badge).not.toBeNull();
+            expect(badge.classList.contains('forecast-nogo')).toBe(true);
+        });
     });
 
     describe('UI Navigation', () => {

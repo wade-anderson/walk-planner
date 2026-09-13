@@ -1,5 +1,5 @@
-// Commit: 6
-const CACHE_NAME = 'walk-planner-v1.2.0';
+// Commit: 7
+const CACHE_NAME = 'walk-planner-v1.3.1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -30,7 +30,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
-            console.log('SW: Clearing old cache');
+            console.log('SW: Clearing old cache', cache);
             return caches.delete(cache);
           }
         })
@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: Stale-While-Revalidate strategy
+// Fetch: Network-First for code (HTML/JS), cache-first with revalidate for other assets, bypass external APIs
 self.addEventListener('fetch', (event) => {
   // Only handle GET requests for our cache
   if (event.request.method !== 'GET') return;
@@ -48,24 +48,41 @@ self.addEventListener('fetch', (event) => {
   // Bypass cache for external APIs (like Open-Meteo) so UI always gets fresh data
   if (event.request.url.includes('open-meteo.com')) return;
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      const fetchPromise = fetch(event.request).then((networkResponse) => {
-        // Only cache valid successful responses
-        if (networkResponse && networkResponse.status === 200) {
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-          });
-        }
-        return networkResponse;
-      }).catch(() => {
-        // network failure, just return cached response if it exists
-        return cachedResponse;
-      });
+  const url = new URL(event.request.url);
+  const isCode = url.pathname.endsWith('.js') || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
 
-      return cachedResponse || fetchPromise;
-    })
-  );
+  if (isCode) {
+    // Network-First with cache fallback for code files
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
+  } else {
+    // Stale-While-Revalidate for other static assets
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        const fetchPromise = fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, networkResponse.clone());
+              });
+            }
+            return networkResponse;
+          })
+          .catch(() => cachedResponse);
+
+        return cachedResponse || fetchPromise;
+      })
+    );
+  }
 });
 
 // Push: Background notifications

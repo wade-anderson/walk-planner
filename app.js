@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 // --- State ---
 let db;
@@ -399,6 +399,48 @@ async function fetchInlineTide(lat, lng, elementId) {
     }
 }
 
+function evaluateHourStatus(hourly, i, walk, tideData) {
+    const isDaylight = hourly.is_day && hourly.is_day[i] === 1;
+    if (!isDaylight) {
+        return { isDaylight: false, isHourGo: false, temp: null, wind: null, wCode: null, tideDescStr: '' };
+    }
+
+    const temp = hourly.apparent_temperature ? hourly.apparent_temperature[i] : null;
+    const wind = hourly.wind_speed_10m ? hourly.wind_speed_10m[i] : null;
+    const wCode = hourly.weather_code ? hourly.weather_code[i] : null;
+
+    const isTempOk = temp !== null && temp >= userSettings.tempMin && temp <= userSettings.tempMax;
+    const isWindOk = wind !== null && wind < userSettings.windMax;
+    const isWeatherOk = !userSettings.noRain || (wCode !== null && wCode < 50);
+
+    let isHourGo = isTempOk && isWindOk && isWeatherOk;
+    let tideDescStr = "";
+
+    if (walk && walk.isBeach) {
+        if (tideData && tideData.lowTideIndices && tideData.times) {
+            const timeStr = hourly.time ? hourly.time[i] : null;
+            const tideIdx = timeStr ? tideData.times.indexOf(timeStr) : -1;
+            if (tideIdx !== -1) {
+                const isTideValid = tideData.lowTideIndices.some(lowIdx => Math.abs(tideIdx - lowIdx) <= userSettings.tideWindow);
+                if (!isTideValid) {
+                    isHourGo = false;
+                    tideDescStr = " • High Tide";
+                } else {
+                    tideDescStr = " • Low Tide";
+                }
+            } else {
+                isHourGo = false;
+                tideDescStr = " • Tide Unavailable";
+            }
+        } else {
+            isHourGo = false;
+            tideDescStr = " • Tide Unavailable";
+        }
+    }
+
+    return { isDaylight: true, isHourGo, temp, wind, wCode, tideDescStr };
+}
+
 async function evaluateWalkStatus(walk, li) {
     const weatherData = await fetchInlineWeather(walk.lat, walk.lng, `weather-${walk.id}`);
     if (weatherData) weatherCache[walk.id] = weatherData;
@@ -459,14 +501,10 @@ async function evaluateWalkStatus(walk, li) {
                 
                 if (dayStatusMap[dateStr]) continue;
                 
-                const isDaylight = hourly.is_day[i] === 1;
-                if (!isDaylight) continue;
+                const hourStatus = evaluateHourStatus(hourly, i, walk, tideData);
+                if (!hourStatus.isDaylight) continue;
                 
-                const temp = hourly.apparent_temperature[i];
-                const wind = hourly.wind_speed_10m[i];
-                const wCode = hourly.weather_code[i];
-                
-                if (temp >= userSettings.tempMin && temp <= userSettings.tempMax && wind < userSettings.windMax && (!userSettings.noRain || wCode < 50)) {
+                if (hourStatus.isHourGo) {
                     dayStatusMap[dateStr] = true;
                 }
             }
@@ -890,8 +928,8 @@ function openInformationView(walk) {
             let currentDayDetailsHtml = "";
             
             for (let i = 0; i < hourly.time.length; i++) {
-                const isDaylight = hourly.is_day[i] === 1;
-                if (!isDaylight) continue; // Skip non-daylight hours entirely
+                const hourStatus = evaluateHourStatus(hourly, i, walk, tData);
+                if (!hourStatus.isDaylight) continue; // Skip non-daylight hours entirely
                 
                 const timeStr = hourly.time[i]; 
                 const dateStr = timeStr.substring(0, 10);
@@ -933,30 +971,7 @@ function openInformationView(walk) {
                     currentDayStr = dateStr;
                 }
                 
-                const temp = hourly.apparent_temperature[i];
-                const wind = hourly.wind_speed_10m[i];
-                const wCode = hourly.weather_code[i];
-                
-                const isTempOk = temp >= userSettings.tempMin && temp <= userSettings.tempMax;
-                const isWindOk = wind < userSettings.windMax;
-                const isWeatherOk = !userSettings.noRain || wCode < 50;
-                
-                let isHourGo = isTempOk && isWindOk && isWeatherOk; 
-                let tideDescStr = "";
-                
-                if (walk.isBeach && tData && tData.lowTideIndices) {
-                    const tideIdx = tData.times.indexOf(timeStr);
-                    if (tideIdx !== -1) {
-                         const isTideValid = tData.lowTideIndices.some(lowIdx => Math.abs(tideIdx - lowIdx) <= userSettings.tideWindow);
-                         if (!isTideValid) {
-                             isHourGo = false;
-                             tideDescStr = " • High Tide";
-                         } else {
-                             tideDescStr = " • Low Tide";
-                         }
-                    }
-                }
-                
+                const { isHourGo, temp, wind, wCode, tideDescStr } = hourStatus;
                 const tintClass = isHourGo ? 'hour-go' : 'hour-nogo';
 
                 const hourDateObj = new Date(timeStr);
@@ -1022,6 +1037,6 @@ document.addEventListener('DOMContentLoaded', initApp);
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        escapeHTML, fetchInlineWeather, evaluateWalkStatus, initDB, addWalk, updateWalk, deleteWalk, getAllWalks, clearAllWalks, saveSettings, loadSettings, userSettings, initApp, initMap, fetchInlineTide
+        escapeHTML, fetchInlineWeather, evaluateWalkStatus, evaluateHourStatus, initDB, addWalk, updateWalk, deleteWalk, getAllWalks, clearAllWalks, saveSettings, loadSettings, userSettings, initApp, initMap, fetchInlineTide
     };
 }
