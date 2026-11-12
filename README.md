@@ -50,6 +50,10 @@ None! The app is built with zero dependencies beyond the external CDNs for Leafl
 2. Open `index.html` in any modern web browser.
 3. (Optional) For the best PWA experience, serve the directory using a simple HTTP server (like `npx serve`) and "Add to Home Screen" on your mobile device.
 
+## 🐳 Server deployment
+
+`npm start` runs `server.js`, which serves the app and stores walks and settings on the server in `$DATA_DIR/data.json` (default `./data`) instead of in each browser, so every device sees the same walks. The `Dockerfile` builds an image for it (mount a volume at `/data`, and set `ALLOWED_HOSTS` to the hostnames/IPs you browse to). To move existing browser data to the server, use Settings → Manage Data → Export in the old app, then Import in the new one.
+
 ## 🏗️ Architecture
 
 The application follows a modular, single-page architecture:

@@ -1,5 +1,5 @@
 // Commit: 7
-const CACHE_NAME = 'walk-planner-v1.3.3';
+const CACHE_NAME = 'walk-planner-v1.4.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -49,6 +49,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('open-meteo.com')) return;
 
   const url = new URL(event.request.url);
+
+  // Never cache the app's own data API (walks/settings live on the server)
+  if (url.pathname.includes('/api/')) return;
+
   const isCode = url.pathname.endsWith('.js') || url.pathname.endsWith('.html') || url.pathname.endsWith('/');
 
   if (isCode) {

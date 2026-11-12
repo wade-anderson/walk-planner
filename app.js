@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.3.3';
+const APP_VERSION = '1.4.0';
 const SAFETY_WIND_MAX = 30; // Max safety wind speed in mph across full temperature range
 
 // --- State ---
@@ -71,6 +71,7 @@ function saveSettings() {
     }
     
     localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+    syncSettingsToServer();
 }
 
 async function requestNotificationPermission() {
@@ -130,6 +131,7 @@ const forecastLog = document.getElementById('forecast-log');
 
 // --- Initialization ---
 async function initApp() {
+    if (useServerStorage()) await loadServerSettings();
     loadSettings();
     initMap();
     await initDB();
@@ -205,8 +207,53 @@ function setMapLocation(lat, lng, panTo = false) {
     }
 }
 
+// --- Server storage ---
+// When the page is served by server.js it sets window.SERVER_STORAGE = true and walks and settings
+// are stored on the server (api/walks, api/settings) instead of in this browser. Without the flag
+// (tests, opening index.html directly) the app uses IndexedDB and localStorage as before.
+const useServerStorage = () => typeof window !== 'undefined' && window.SERVER_STORAGE === true && typeof fetch === 'function';
+
+async function api(method, path, body) {
+    const opts = { method, cache: 'no-store' };
+    if (body !== undefined) {
+        opts.headers = { 'Content-Type': 'application/json' };
+        opts.body = JSON.stringify(body);
+    }
+    let res;
+    try {
+        res = await fetch('api/' + path, opts);
+    } catch (e) {
+        if (method !== 'GET') alert('Could not reach the server. Your last change was not saved.');
+        throw e;
+    }
+    if (!res.ok) {
+        if (method !== 'GET') alert('The server could not save your change (HTTP ' + res.status + ').');
+        throw new Error('Server returned HTTP ' + res.status);
+    }
+    return res.json();
+}
+
+async function loadServerSettings() {
+    try {
+        const s = await api('GET', 'settings');
+        if (s && typeof s === 'object' && Object.keys(s).length) {
+            localStorage.setItem('walkSettings', JSON.stringify(s));
+        } else {
+            localStorage.removeItem('walkSettings');
+        }
+    } catch (e) {
+        console.error('Could not load settings from the server', e);
+    }
+}
+
+function syncSettingsToServer(reset) {
+    if (!useServerStorage()) return Promise.resolve();
+    return (reset ? api('DELETE', 'settings') : api('PUT', 'settings', userSettings)).catch(console.error);
+}
+
 // --- IndexedDB Logic ---
 function initDB() {
+    if (useServerStorage()) return Promise.resolve();
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -230,6 +277,7 @@ function initDB() {
 }
 
 function addWalk(walk) {
+    if (useServerStorage()) return api('POST', 'walks', walk).then(r => r.id);
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
@@ -240,6 +288,7 @@ function addWalk(walk) {
 }
 
 function updateWalk(walk) {
+    if (useServerStorage()) return api('PUT', 'walks/' + walk.id, walk).then(() => walk.id);
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
@@ -250,6 +299,7 @@ function updateWalk(walk) {
 }
 
 function deleteWalk(id) {
+    if (useServerStorage()) return api('DELETE', 'walks/' + id).then(() => undefined);
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
@@ -260,6 +310,7 @@ function deleteWalk(id) {
 }
 
 function getAllWalks() {
+    if (useServerStorage()) return api('GET', 'walks');
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
@@ -270,6 +321,7 @@ function getAllWalks() {
 }
 
 function clearAllWalks() {
+    if (useServerStorage()) return api('DELETE', 'walks').then(() => undefined);
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
@@ -662,6 +714,7 @@ function setupEventListeners() {
                         if (s.noRain !== undefined) userSettings.noRain = Boolean(s.noRain);
                         if (s.allowNotifications !== undefined) userSettings.allowNotifications = Boolean(s.allowNotifications);
                         localStorage.setItem('walkSettings', JSON.stringify(userSettings));
+                        await syncSettingsToServer();
                         loadSettings(); // Refresh UI with imported settings
                     }
                 } else if (Array.isArray(importedData)) {
@@ -710,6 +763,7 @@ function setupEventListeners() {
             // Wipe everything
             await clearAllWalks();
             localStorage.removeItem('walkSettings');
+            await syncSettingsToServer(true);
             
             // Reset state to defaults
             userSettings = {

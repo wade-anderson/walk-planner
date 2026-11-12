@@ -13,4 +13,7 @@ This is the architecture for a walk planner app.
 11. Data preservation is handled via native Javascript `Blob` JSON serialization for unified database and settings exportation, and the native `FileReader API` for backup ingestion and reconstruction.
 12. The application utilizes a Progressive Web App (PWA) architecture with a `manifest.json`. The Service Worker (`sw.js`) uses `self.skipWaiting()` and `clients.claim()` for immediate version takeover upon update.
 13. The Service Worker implements an "Offline-First" caching strategy using the `Cache Storage API` to preserve UI and Leaflet map resources.
-14. The system leverages the browser `Notification API` for background alerts. A "Once-per-day" notification logic is implemented in `app.js`, checking the `lastNotifiedDate` stored in IndexedDB to prevent duplicate user alerts within a 24-hour window.
+14. The system leverages the browser `Notification API` for background alerts. A "Once-per-day" notification logic is implemented in `app.js`, checking the `lastNotifiedDate` stored in IndexedDB to prevent duplicate user alerts within a 24-hour window.
+
+15. Server storage: when served by `server.js` (the Docker deployment), walks and settings are stored on the server, not in the browser. `server.js` injects `window.SERVER_STORAGE = true` into `index.html`; `app.js` then routes its walk functions (addWalk, updateWalk, deleteWalk, getAllWalks, clearAllWalks) and settings through `api/walks` and `api/settings`, kept in `$DATA_DIR/data.json`. Without the flag (jest tests, opening index.html directly) IndexedDB and localStorage are used as before. The Service Worker never caches `/api/` requests. URLs are relative so the app works behind a path prefix such as `/walks/`.
+

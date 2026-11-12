@@ -1,0 +1,11 @@
+.git
+node_modules
+coverage
+tests
+data
+*.md
+*.txt
+jest.*
+package*.json
+Dockerfile
+.dockerignore
