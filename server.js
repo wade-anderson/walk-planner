@@ -107,6 +107,11 @@ const REFRESH_CHECK_MS = 10 * 60 * 1000;  // how often the background refresher 
 const UNUSED_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 200;
 const UPSTREAM_TIMEOUT_MS = 10000;
+// Protect Open-Meteo's free-tier limits (600/min, 5,000/hour, 10,000/day) and this machine's IP:
+const FAILURE_BACKOFF_MS = 60 * 1000;          // after a failed fetch, don't retry that location for 1 min
+const RATE_LIMIT_BACKOFF_MS = 10 * 60 * 1000;  // after an HTTP 429, stop all upstream calls for 10 min
+const HOURLY_UPSTREAM_CAP = 1000;              // hard backstops; normal use is ~150/day
+const DAILY_UPSTREAM_CAP = 4000;
 
 const FORECAST_KINDS = {
     weather: {
@@ -123,8 +128,27 @@ const FORECAST_KINDS = {
     }
 };
 
-// key "kind|lat|lng" -> { kind, lat, lng, data, fetchedAt, lastUsed, inflight }
+// key "kind|lat|lng" -> { kind, lat, lng, data, fetchedAt, lastUsed, inflight, failedUntil }
 const forecastCache = new Map();
+
+// Global upstream accounting
+const upstreamLog = [];          // timestamps of recent upstream requests
+let upstreamPausedUntil = 0;     // set after a 429
+
+function upstreamAllowed() {
+    const now = Date.now();
+    if (now < upstreamPausedUntil) return false;
+    while (upstreamLog.length && now - upstreamLog[0] > 24 * 3600 * 1000) upstreamLog.shift();
+    const lastHour = upstreamLog.filter(t => now - t <= 3600 * 1000).length;
+    return lastHour < HOURLY_UPSTREAM_CAP && upstreamLog.length < DAILY_UPSTREAM_CAP;
+}
+
+// Only locations of saved walks are served: clients can't make the server fetch arbitrary places.
+function isSavedLocation(lat, lng) {
+    let walks;
+    try { walks = loadData().walks; } catch (e) { return false; }
+    return walks.some(w => roundCoord(Number(w.lat)) === lat && roundCoord(Number(w.lng)) === lng);
+}
 
 function roundCoord(v) {
     return Math.round(v * 10000) / 10000; // ~11 m: same spot -> same cache entry
@@ -138,14 +162,22 @@ function parseCoords(searchParams) {
 }
 
 async function fetchUpstream(kind, lat, lng) {
+    if (!upstreamAllowed()) throw new Error('upstream paused or over its request cap');
+    upstreamLog.push(Date.now());
     const res = await fetch(FORECAST_KINDS[kind].url(lat, lng), { signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) });
+    if (res.status === 429) {
+        upstreamPausedUntil = Date.now() + RATE_LIMIT_BACKOFF_MS;
+        const err = new Error(`Open-Meteo ${kind} HTTP 429 (rate limited; pausing upstream calls)`);
+        err.backoffMs = RATE_LIMIT_BACKOFF_MS;
+        throw err;
+    }
     if (!res.ok) throw new Error(`Open-Meteo ${kind} HTTP ${res.status}`);
     return res.json();
 }
 
 // Returns the cache entry, fetching when missing/stale. Concurrent callers share one upstream request.
 // If a refresh fails but older data exists, the older data is kept and returned.
-async function getForecast(kind, lat, lng, { force = false } = {}) {
+async function getForecast(kind, lat, lng, { force = false, maxAgeMs = null } = {}) {
     const key = `${kind}|${lat}|${lng}`;
     let entry = forecastCache.get(key);
     if (!entry) {
@@ -154,15 +186,24 @@ async function getForecast(kind, lat, lng, { force = false } = {}) {
         forecastCache.set(key, entry);
     }
     const age = Date.now() - entry.fetchedAt;
-    const stale = !entry.data || age >= FORECAST_KINDS[kind].ttl || (force && age >= FORCE_MIN_AGE_MS);
-    if (stale) {
+    const limit = maxAgeMs === null ? FORECAST_KINDS[kind].ttl : maxAgeMs;
+    const stale = !entry.data || age >= limit || (force && age >= FORCE_MIN_AGE_MS);
+    // After a failure, serve what we have (or fail fast) instead of retrying upstream on every request.
+    const backingOff = Date.now() < (entry.failedUntil || 0);
+    if (stale && !backingOff) {
         if (!entry.inflight) {
             entry.inflight = fetchUpstream(kind, lat, lng)
-                .then(data => { entry.data = data; entry.fetchedAt = Date.now(); })
-                .catch(err => { console.error(`[Forecast] ${err.message} (${lat},${lng})`); if (!entry.data) throw err; })
+                .then(data => { entry.data = data; entry.fetchedAt = Date.now(); entry.failedUntil = 0; })
+                .catch(err => {
+                    entry.failedUntil = Date.now() + (err.backoffMs || FAILURE_BACKOFF_MS);
+                    console.error(`[Forecast] ${err.message} (${lat},${lng})`);
+                    if (!entry.data) throw err;
+                })
                 .finally(() => { entry.inflight = null; });
         }
         await entry.inflight;
+    } else if (!entry.data) {
+        throw new Error('no data and upstream is backing off');
     }
     return entry;
 }
@@ -187,11 +228,10 @@ async function refreshSavedWalks() {
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
         const kinds = w.isBeach ? ['weather', 'tide'] : ['weather'];
         for (const kind of kinds) {
-            // refresh a little before expiry so a client request rarely finds stale data
-            const key = `${kind}|${roundCoord(lat)}|${roundCoord(lng)}`;
-            const e = forecastCache.get(key);
-            if (e && e.data && Date.now() - e.fetchedAt < FORECAST_KINDS[kind].ttl - REFRESH_CHECK_MS) continue;
-            try { await getForecast(kind, roundCoord(lat), roundCoord(lng)); } catch (err) { /* logged */ }
+            // refresh one check-interval before expiry, so data is never older than its TTL
+            try {
+                await getForecast(kind, roundCoord(lat), roundCoord(lng), { maxAgeMs: FORECAST_KINDS[kind].ttl - REFRESH_CHECK_MS });
+            } catch (err) { /* logged */ }
         }
     }
     pruneForecastCache();
@@ -201,6 +241,7 @@ function handleForecast(req, res, kind, searchParams) {
     if (req.method !== 'GET') return sendJson(res, 405, { error: 'Method not allowed' });
     const c = parseCoords(searchParams);
     if (!c) return sendJson(res, 400, { error: 'lat and lng must be valid coordinates' });
+    if (!isSavedLocation(c.lat, c.lng)) return sendJson(res, 404, { error: 'unknown location: save the walk first' });
     getForecast(kind, c.lat, c.lng, { force: searchParams.get('refresh') === '1' })
         .then(entry => {
             entry.lastUsed = Date.now();
@@ -303,4 +344,10 @@ if (require.main === module) {
     });
 }
 
-module.exports = { server, refreshSavedWalks, forecastCache };
+function resetForecastState() {   // for tests
+    forecastCache.clear();
+    upstreamLog.length = 0;
+    upstreamPausedUntil = 0;
+}
+
+module.exports = { server, refreshSavedWalks, forecastCache, upstreamLog, resetForecastState };
