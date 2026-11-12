@@ -2,7 +2,7 @@
 const DB_NAME = 'WalkPlannerDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'walks';
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const SAFETY_WIND_MAX = 30; // Max safety wind speed in mph across full temperature range
 
 // --- State ---
@@ -15,6 +15,25 @@ let weatherIntervals = []; // Remaining variable for legacy scope fallback if ne
 const weatherCache = {};
 const tideCache = {};
 let lastFetchTime = null;
+// Set by the [Update] button: asks the server to refetch from Open-Meteo (if its copy is >5 min old).
+let forceForecastRefresh = false;
+
+// In server mode the server fetches and caches weather/tide; the page just reads it from there.
+function forecastUrl(kind, lat, lng) {
+    if (useServerStorage()) {
+        return `api/${kind}?lat=${lat}&lng=${lng}${forceForecastRefresh ? '&refresh=1' : ''}`;
+    }
+    return kind === 'weather'
+        ? `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&hourly=apparent_temperature,wind_speed_10m,weather_code,is_day&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph`
+        : `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=sea_level_height_msl&timezone=auto`;
+}
+
+// When the data was fetched from Open-Meteo (server-provided), else now.
+function fetchedAtOf(res) {
+    const h = res && res.headers && typeof res.headers.get === 'function' ? res.headers.get('X-Fetched-At') : null;
+    const t = h ? new Date(h) : null;
+    return t && !isNaN(t) ? t : new Date();
+}
 
 let userSettings = {
     tempMin: 68,
@@ -143,7 +162,16 @@ async function initApp() {
     if (versionEl) versionEl.textContent = `v${APP_VERSION}`;
     
     // Explicit global synchronization fallback interval
-    setInterval(triggerGlobalUpdate, 3600000);
+    // Server mode: re-read the server's cached forecast every 15 min (cheap, no Open-Meteo call),
+    // and when a phone brings the page back to the foreground with data over 15 min old.
+    const refreshMs = useServerStorage() ? 15 * 60 * 1000 : 3600000;
+    setInterval(() => triggerGlobalUpdate(), refreshMs);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && useServerStorage() && lastFetchTime
+            && Date.now() - lastFetchTime.getTime() > refreshMs) {
+            triggerGlobalUpdate();
+        }
+    });
 
     // Register Service Worker for PWA / Offline support
     if ('serviceWorker' in navigator) {
@@ -349,7 +377,7 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
     try {
         const safeLat = Number(lat) || 0;
         const safeLng = Number(lng) || 0;
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${safeLat}&longitude=${safeLng}&current=temperature_2m,apparent_temperature,wind_speed_10m,weather_code&hourly=apparent_temperature,wind_speed_10m,weather_code,is_day&timezone=auto&temperature_unit=fahrenheit&wind_speed_unit=mph`;
+        const url = forecastUrl('weather', safeLat, safeLng);
         const res = await fetch(url);
         if (!res.ok) throw new Error('Weather fetch failed');
         const data = await res.json();
@@ -366,7 +394,7 @@ async function fetchInlineWeather(lat, lng, elementId, retries = 3) {
             <span class="details">Feels like ${feelsLike}°F • ${desc} • Wind: ${wind} mph</span>
         `;
         
-        return { feelsLike, wind, weatherCode: code, hourly: data.hourly };
+        return { feelsLike, wind, weatherCode: code, hourly: data.hourly, fetchedAt: fetchedAtOf(res) };
     } catch (err) {
         if (retries > 0) {
             el.innerHTML = `<div class="spinner" style="width:15px; height:15px; margin: 0;"></div><span class="details" style="margin-left: 8px;">...</span>`;
@@ -390,7 +418,7 @@ async function fetchInlineTide(lat, lng, elementId) {
     try {
         const safeLat = Number(lat) || 0;
         const safeLng = Number(lng) || 0;
-        const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${safeLat}&longitude=${safeLng}&hourly=sea_level_height_msl&timezone=auto`;
+        const url = forecastUrl('tide', safeLat, safeLng);
         const res = await fetch(url);
         if (!res.ok) throw new Error('Marine fetch failed');
         const data = await res.json();
@@ -900,13 +928,18 @@ async function renderWalks() {
     
     // Evaluate orchestrated network states across the entire domain!
     const results = await Promise.all(networkPromises);
+    forceForecastRefresh = false;
     if (!results.includes(false) && results.length > 0) {
-        lastFetchTime = new Date();
+        // Show the age of the oldest data on screen (server mode: when the server got it).
+        const times = walks.map(w => weatherCache[w.id] && weatherCache[w.id].fetchedAt).filter(Boolean);
+        lastFetchTime = times.length ? new Date(Math.min(...times.map(t => t.getTime()))) : new Date();
     }
     renderGlobalFetchTracker();
 }
 
-async function triggerGlobalUpdate() {
+async function triggerGlobalUpdate(event) {
+    // A click on [Update] asks for fresh data; the timer just re-reads the server's cache.
+    if (event) forceForecastRefresh = true;
     const tracker = document.getElementById('global-fetch-tracker');
     if (tracker) tracker.innerHTML = `Executing synchronization...`;
     await renderWalks();

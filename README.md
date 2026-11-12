@@ -52,7 +52,7 @@ None! The app is built with zero dependencies beyond the external CDNs for Leafl
 
 ## 🐳 Server deployment
 
-`npm start` runs `server.js`, which serves the app and stores walks and settings on the server in `$DATA_DIR/data.json` (default `./data`) instead of in each browser, so every device sees the same walks. The `Dockerfile` builds an image for it (mount a volume at `/data`, and set `ALLOWED_HOSTS` to the hostnames/IPs you browse to). To move existing browser data to the server, use Settings → Manage Data → Export in the old app, then Import in the new one.
+`npm start` runs `server.js`, which serves the app and stores walks and settings on the server in `$DATA_DIR/data.json` (default `./data`) instead of in each browser, so every device sees the same walks. It also fetches weather and tide data from Open-Meteo itself, caches it, and keeps it fresh (weather every 30 min, tides every 6 h), so phones get an instant answer and never call Open-Meteo directly. The `Dockerfile` builds an image for it (mount a volume at `/data`, and set `ALLOWED_HOSTS` to the hostnames/IPs you browse to). To move existing browser data to the server, use Settings → Manage Data → Export in the old app, then Import in the new one.
 
 ## 🏗️ Architecture
 

@@ -42,6 +42,41 @@ describe('Walk Planner', () => {
         });
     });
 
+    describe('Server-provided forecasts', () => {
+        it('in server mode, weather and tide come from the server cache, not Open-Meteo', async () => {
+            const originalFetch = window.fetch;
+            const urls = [];
+            window.fetch = jest.fn().mockImplementation(async (url) => {
+                urls.push(url);
+                return {
+                    ok: true,
+                    headers: { get: (h) => (h === 'X-Fetched-At' ? '2026-11-12T15:00:00.000Z' : null) },
+                    json: async () => ({ current: { temperature_2m: 70, apparent_temperature: 71, wind_speed_10m: 5, weather_code: 0 }, hourly: { time: [], sea_level_height_msl: [] } })
+                };
+            });
+            window.SERVER_STORAGE = true;
+            const el = document.createElement('div');
+            el.id = 'weather-srv';
+            document.body.appendChild(el);
+            const tideEl = document.createElement('div');
+            tideEl.id = 'tide-srv';
+            document.body.appendChild(tideEl);
+
+            const w = await fetchInlineWeather(29.5, -81.2, 'weather-srv');
+            await fetchInlineTide(29.5, -81.2, 'tide-srv');
+
+            expect(urls[0]).toBe('api/weather?lat=29.5&lng=-81.2');
+            expect(urls[1]).toBe('api/tide?lat=29.5&lng=-81.2');
+            expect(urls.some(u => u.includes('open-meteo.com'))).toBe(false);
+            expect(w.fetchedAt.toISOString()).toBe('2026-11-12T15:00:00.000Z');
+
+            delete window.SERVER_STORAGE;
+            window.fetch = originalFetch;
+            el.remove();
+            tideEl.remove();
+        });
+    });
+
     describe('Database (IndexedDB)', () => {
         beforeEach(async () => {
             if (!window.db) await initDB();
